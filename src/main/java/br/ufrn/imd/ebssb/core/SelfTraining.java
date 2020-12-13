@@ -52,18 +52,7 @@ public class SelfTraining {
 		this.unlabeledSet = new Dataset(testSet.getInstances().trainCV(10, 0));
 	}
 
-	protected void splitByPercentage() {
-		int total = testSet.getInstances().size() * (this.labeledSetPercentual / 100);
-
-		this.labeledSet = new Dataset(new Instances(this.testSet.getInstances(), 0, total));
-
-		this.unlabeledSet = new Dataset(new Instances(this.testSet.getInstances(), 0, 1));
-		this.unlabeledSet.getInstances().clear();
-
-		for (int i = total; i < this.testSet.getInstances().size(); i++) {
-			this.unlabeledSet.getInstances().add(this.testSet.getInstances().get(i));
-		}
-	}	
+	
 	
 	protected void trainMainCLassifierOverLabeledSet() throws Exception {
 		this.mainClassifier.buildClassifier(this.labeledSet.getInstances());

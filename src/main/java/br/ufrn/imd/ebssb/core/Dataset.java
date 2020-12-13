@@ -13,6 +13,7 @@ public class Dataset {
 	
 	private String datasetName;
 	private ArrayList<MyInstance> myInstances;
+	private Double totalWeight;
 	
 	public Dataset() {
 		
@@ -22,6 +23,7 @@ public class Dataset {
 		instances = DataSource.read(pathAndDataSetName);
 		instances.setClassIndex(instances.numAttributes() - 1);
 		this.datasetName = instances.relationName();
+		this.totalWeight = -1.0;
 		
 		matchInstancesAndMyInstances();	
 	}
@@ -29,6 +31,7 @@ public class Dataset {
 	public Dataset(Instances instances) {
 		this.instances = new Instances(instances);
 		this.datasetName = instances.relationName();
+		this.totalWeight = -1.0;
 		
 		matchInstancesAndMyInstances();
 	}
@@ -36,15 +39,11 @@ public class Dataset {
 	public Dataset(Dataset dataset) {
 		this.instances = new Instances(dataset.getInstances());
 		this.datasetName = instances.relationName();
+		this.totalWeight = -1.0;
 		
 		matchInstancesAndMyInstances();
 	}
-	
-	/**
-	 * 
-	 * @param seed
-	 * @return
-	 */
+
 	public void shuffleInstances(int seed) {
 		this.instances.randomize(new Random(seed));
 		
@@ -58,12 +57,27 @@ public class Dataset {
 		this.myInstances.add(new MyInstance(a));
 	}
 
+	public void addLabelledInstance(Instance instance) {
+		Instance a = instance;
+		this.instances.add(a);
+		
+		MyInstance myInst = new MyInstance(a);
+		myInst.setInstanceClass(a.classValue());
+		this.myInstances.add(myInst);
+	}
+	
 	public void clearInstances() {
 		this.instances.clear();
 		
 		this.myInstances = new ArrayList<MyInstance>();
 	}
 
+	public void initInstancesWeight(Double initialWeight) {
+		for(MyInstance m: myInstances) {
+			m.setWeight(initialWeight);
+		}
+	};
+	
 	public String getDatasetName() {
 		return datasetName;
 	}
@@ -143,6 +157,22 @@ public class Dataset {
 		}
 		
 		return new Dataset(ins);
+	}
+
+	public ArrayList<MyInstance> getMyInstances() {
+		return myInstances;
+	}
+
+	public void setMyInstances(ArrayList<MyInstance> myInstances) {
+		this.myInstances = myInstances;
+	}
+
+	public Double getTotalWeight() {
+		return totalWeight;
+	}
+
+	public void setTotalWeight(Double totalWeight) {
+		this.totalWeight = totalWeight;
 	}
 
 }

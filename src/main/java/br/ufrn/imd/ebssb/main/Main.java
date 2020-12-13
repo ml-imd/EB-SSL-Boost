@@ -41,13 +41,6 @@ public class Main {
 		
 		for (Dataset d : datasets) {
 			
-			//run(d, selfTrainingStandard);
-			//run(d, selfTrainingVersionOne);
-			//run(d, selfTrainingVersionTwo);
-			
-			//run(d, selfTrainingVersionOneDistance);
-			//run(d, selfTrainingVersionTwoDistance);
-			//run(d, selfTrainingStandardDistance);
 			run(d, selfTrainingTest);
 		}
 	}
