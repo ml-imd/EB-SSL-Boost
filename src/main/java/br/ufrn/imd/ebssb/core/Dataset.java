@@ -78,6 +78,10 @@ public class Dataset {
 		}
 	};
 	
+	public void increaseTotalWeight(double value) {
+		this.totalWeight += value;
+	}
+	
 	public String getDatasetName() {
 		return datasetName;
 	}

@@ -14,7 +14,12 @@ public class InstanceResult{
 	private Double bestClass;
 	private Integer bestAgreement;
 	private Double factor;
-
+	
+	
+	public InstanceResult() {
+		
+	}
+	
 	public InstanceResult(Instance instance) {
 		this.instance = instance;
 		this.predictions = new ArrayList<Double>();

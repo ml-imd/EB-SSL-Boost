@@ -31,10 +31,14 @@ public class EbSsBoost {
 	protected double agreementThreshold = 75;
 
 	protected int labeledSetPercentual = 10;
+	private Double initialWeight = 1.0;
+	
 	protected int goodClassifiedInstances = 0;
 	protected int missClassifiedInstances = 0;
-	private Double initialWeight = 1.0;
 
+	protected int boostSubsetPercent = 20;
+	protected int boostSubsetAmount;
+	
 	protected FoldResult result;
 	protected String history;
 	protected String iterationInfo;
@@ -48,9 +52,14 @@ public class EbSsBoost {
 
 		this.validationSet = new Dataset(validationSet);
 		this.testSet = new Dataset(testSet);
-
+		this.tempSet = new Dataset(testSet);
+		this.tempSet.clearInstances();
+		
 		this.pool = new ArrayList<Classifier>();
 		populatePool();
+
+		buildTestSetByStratifiedSplit();
+		this.boostSubsetAmount = testSet.getInstances().size() * this.boostSubsetPercent / 100;
 	}
 
 	public void initWeights() {
@@ -58,13 +67,13 @@ public class EbSsBoost {
 	}
 
 	public void runEbSsBoost() throws Exception {
-		buildTestSetByStratifiedSplit();
+
 		initWeights();
 		trainClassifiersPool();
 		classifyUnlabelledByPool();
-		
-		//parei aqui
-		
+
+		// parei aqui
+
 	}
 
 	/**
@@ -75,7 +84,7 @@ public class EbSsBoost {
 	 * testSet.instances
 	 * 
 	 */
-	protected void buildTestSetByStratifiedSplit() {
+	private void buildTestSetByStratifiedSplit() {
 		testSet.getInstances().stratify(10);
 
 		Instances labelled = testSet.getInstances().testCV(10, 0);
@@ -94,25 +103,46 @@ public class EbSsBoost {
 		}
 	}
 
-	public void trainClassifiersPool() throws Exception {
+	private void trainClassifiersPool() throws Exception {
 		for (Classifier c : pool) {
 			c.buildClassifier(this.labeledSet.getInstances());
 		}
 	}
 
-	public void classifyUnlabelledByPool() throws Exception {
-
-		for (MyInstance m : this.testSet.getMyInstances()) {
+	private void classifyUnlabelledByPool() throws Exception {
+		
+		InstanceResult result;
+		
+		for (MyInstance m : this.testSet.getMyInstances()) {	
 			if (m.getInstanceClass() == -1) {
-				m.addInstanceResult(new InstanceResult(m.getInstance()));
+				result = new InstanceResult(m.getInstance());
+				
 				for (Classifier c : this.pool) {
-					m.getResults().get(m.getResults().size() - 1).addPrediction(c.classifyInstance(m.getInstance()));
+					result.addPrediction(c.classifyInstance(m.getInstance()));
 				}
+				m.setResult(result);
+				
 			}
 		}
 
 	}
 
+	private void sampleDataForBoostClassifier() {
+		//building the tempSet for weighted draw on it
+		for(MyInstance m: this.testSet.getMyInstances()) {
+			if(m.getInstanceClass() != -1.0 || m.getResult().getBestAgreement() >= this.agreementThreshold) {
+				MyInstance mNew = new MyInstance(m.getInstance());
+				mNew.setInstanceClass(m.getInstanceClass());
+				mNew.setWeight(m.getWeight());				
+				
+				this.tempSet.getMyInstances().add(mNew);
+				this.tempSet.increaseTotalWeight(mNew.getWeight());
+			}
+			
+			//parei aqui
+		}
+	}
+	
 	private void populatePool() {
 		J48 j48a = new J48();
 		J48 j48b = new J48();
@@ -207,3 +237,4 @@ public class EbSsBoost {
 	}
 
 }
+

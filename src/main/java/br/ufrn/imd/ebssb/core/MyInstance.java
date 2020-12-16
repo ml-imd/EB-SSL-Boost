@@ -1,7 +1,5 @@
 package br.ufrn.imd.ebssb.core;
 
-import java.util.ArrayList;
-
 import br.ufrn.imd.ebssb.results.InstanceResult;
 import weka.core.Instance;
 
@@ -10,19 +8,17 @@ public class MyInstance {
 	private Instance instance;
 	private Double weight;
 	private Double instanceClass;
-	private ArrayList<InstanceResult> results;
+	private InstanceResult result;
 	
 	public MyInstance(Instance instance) {
 		this.instance = instance;
 		this.instanceClass = -1.0;
-		this.results = new ArrayList<InstanceResult>();
 	}
 	
 	public MyInstance(Instance instance, Double weight) {
 		this.instance = instance;
 		this.instanceClass = -1.0;
 		this.weight = weight;
-		this.results = new ArrayList<InstanceResult>();
 	}
 
 	public void increaseWeight(Double value) {
@@ -31,10 +27,6 @@ public class MyInstance {
 	
 	public void decreaseWeight(Double value) {
 		this.weight -= value;
-	}
-	
-	public void addInstanceResult(InstanceResult result) {
-		this.results.add(result);
 	}
 	
 	public Instance getInstance() {
@@ -61,12 +53,12 @@ public class MyInstance {
 		this.instanceClass = instanceClass;
 	}
 
-	public ArrayList<InstanceResult> getResults() {
-		return results;
+	public InstanceResult getResult() {
+		return result;
 	}
 
-	public void setResults(ArrayList<InstanceResult> results) {
-		this.results = results;
+	public void setResult(InstanceResult result) {
+		this.result = result;
 	}
 	
 }
