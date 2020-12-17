@@ -28,8 +28,9 @@ public class EbSsBoost {
 	private ArrayList<Classifier> bc; // boost committee
 
 	protected ArrayList<Classifier> pool;
-	protected double agreementThreshold = 75;
-
+	protected double agreementThreshold = 75; //agreement percent
+	protected int agreementValue; //number of votes - target
+	
 	protected int labeledSetPercentual = 10;
 	private Double initialWeight = 1.0;
 	
@@ -39,15 +40,18 @@ public class EbSsBoost {
 	protected int boostSubsetPercent = 20;
 	protected int boostSubsetAmount;
 	
+	protected MyRandom random;
+	
 	protected FoldResult result;
 	protected String history;
 	protected String iterationInfo;
 
-	public EbSsBoost(Dataset testSet, Dataset validationSet) {
+	public EbSsBoost(Dataset testSet, Dataset validationSet, int seed) {
 
 		this.result = new FoldResult();
 		this.history = new String();
-
+		this.random = new MyRandom(seed);
+		
 		this.bc = new ArrayList<Classifier>();
 
 		this.validationSet = new Dataset(validationSet);
@@ -60,6 +64,9 @@ public class EbSsBoost {
 
 		buildTestSetByStratifiedSplit();
 		this.boostSubsetAmount = testSet.getInstances().size() * this.boostSubsetPercent / 100;
+		
+		System.out.println("testset tem: " + testSet.getInstances().size() + " instancias");
+		System.out.println("subset do boost deve ter: " + this.boostSubsetAmount + " instancias");
 	}
 
 	public void initWeights() {
@@ -71,7 +78,7 @@ public class EbSsBoost {
 		initWeights();
 		trainClassifiersPool();
 		classifyUnlabelledByPool();
-
+		sampleDataForBoostClassifier();
 		// parei aqui
 
 	}
@@ -112,7 +119,9 @@ public class EbSsBoost {
 	private void classifyUnlabelledByPool() throws Exception {
 		
 		InstanceResult result;
+		int count = 0;
 		
+		//COLOCAR ISSO COMO ITERATOR
 		for (MyInstance m : this.testSet.getMyInstances()) {	
 			if (m.getInstanceClass() == -1) {
 				result = new InstanceResult(m.getInstance());
@@ -121,16 +130,25 @@ public class EbSsBoost {
 					result.addPrediction(c.classifyInstance(m.getInstance()));
 				}
 				m.setResult(result);
-				
+				if(result.getBestAgreement() >= 15) {
+					count++;
+				}
 			}
+			
 		}
+		System.out.println("rotuladas pelo pool: " + count + "\n\n");
 
 	}
 
 	private void sampleDataForBoostClassifier() {
 		//building the tempSet for weighted draw on it
+		Instances boostSubset = new Instances(tempSet.getInstances());
+		boostSubset.clear();
+		ArrayList<MyInstance> myInstances = new ArrayList<MyInstance>();
+		
+		
 		for(MyInstance m: this.testSet.getMyInstances()) {
-			if(m.getInstanceClass() != -1.0 || m.getResult().getBestAgreement() >= this.agreementThreshold) {
+			if(m.getInstanceClass() != -1.0 || m.getResult().getBestAgreement() >= this.agreementValue) {
 				MyInstance mNew = new MyInstance(m.getInstance());
 				mNew.setInstanceClass(m.getInstanceClass());
 				mNew.setWeight(m.getWeight());				
@@ -138,9 +156,20 @@ public class EbSsBoost {
 				this.tempSet.getMyInstances().add(mNew);
 				this.tempSet.increaseTotalWeight(mNew.getWeight());
 			}
-			
-			//parei aqui
 		}
+
+		Dataset d = new Dataset(boostSubset);
+		
+		while(d.getMyInstances().size() < this.boostSubsetAmount) {
+			d.addMyInstance(this.tempSet.drawOne(random));
+		}
+		
+		
+		System.out.println(tempSet.getInstances().size() + "\n\n");
+		
+		System.out.println(myInstances.size() + "\n\n");
+		
+		System.out.println(this.testSet.getMyInstancesSummary());
 	}
 	
 	private void populatePool() {
@@ -234,6 +263,9 @@ public class EbSsBoost {
 		this.pool.add(dt1);
 		this.pool.add(dt2);
 		this.pool.add(dt3);
+		
+		double agreementValue = pool.size() * agreementThreshold / 100;
+		this.agreementValue = (int) agreementValue;
 	}
 
 }

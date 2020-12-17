@@ -94,6 +94,22 @@ public class InstanceResult{
 
 	/**
 	 * 
+	 * @return instanceResult summary to myInstance toString Composition
+	 * 
+	 */
+	public String getResultSummary() {
+		StringBuilder sb = new StringBuilder();
+		sb.append(agreementsPerClass.toString());
+		sb.append(";");
+		sb.append(bestClass);
+		sb.append(";");
+		sb.append(bestAgreement);
+
+		return sb.toString();
+	}
+	
+	/**
+	 * 
 	 * @return This method return one string under csv rules, separated by ";" and
 	 *         with all data recorded inside object at the moment of method's call.
 	 * 

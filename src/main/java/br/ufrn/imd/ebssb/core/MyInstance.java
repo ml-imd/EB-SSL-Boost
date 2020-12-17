@@ -1,6 +1,7 @@
 package br.ufrn.imd.ebssb.core;
 
 import br.ufrn.imd.ebssb.results.InstanceResult;
+import br.ufrn.imd.ebssb.utils.NumberUtils;
 import weka.core.Instance;
 
 public class MyInstance {
@@ -9,6 +10,10 @@ public class MyInstance {
 	private Double weight;
 	private Double instanceClass;
 	private InstanceResult result;
+	
+	public MyInstance() {
+		
+	}
 	
 	public MyInstance(Instance instance) {
 		this.instance = instance;
@@ -60,5 +65,29 @@ public class MyInstance {
 	public void setResult(InstanceResult result) {
 		this.result = result;
 	}
+
+	@Override
+	public String toString() {
+		
+		String r  = "null";
+		if(result != null) {
+			r = result.getResultSummary();
+		}
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		sb.append(instance.toString());
+		sb.append("]: ");
+		sb.append(NumberUtils.doubleToString(weight));
+		sb.append(" ; ");
+		sb.append(instanceClass);
+		sb.append(" ; ");
+		sb.append("#result: ");
+		sb.append(r);
+		sb.append(" #");
+		return sb.toString();
+		
+	}
+	
 	
 }

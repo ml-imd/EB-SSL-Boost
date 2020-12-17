@@ -40,7 +40,8 @@ public class Teste {
 				}
 			}
 
-			EbSsBoost ssBoost = new EbSsBoost(Dataset.joinDatasets(foldsForTest), validation);
+			EbSsBoost ssBoost = new EbSsBoost(Dataset.joinDatasets(foldsForTest), validation, seed);
+			ssBoost.runEbSsBoost();
 			break;
 		}
 	}
