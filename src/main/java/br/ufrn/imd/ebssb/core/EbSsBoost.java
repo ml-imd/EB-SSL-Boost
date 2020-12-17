@@ -1,6 +1,7 @@
 package br.ufrn.imd.ebssb.core;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import br.ufrn.imd.ebssb.results.FoldResult;
 import br.ufrn.imd.ebssb.results.InstanceResult;
@@ -19,8 +20,8 @@ public class EbSsBoost {
 	protected Dataset testSet;
 
 	protected Dataset labeledSet;
-	protected Dataset unlabeledSet;
-
+	
+	protected Dataset boostSubSet;
 	protected Dataset tempSet;
 
 	protected Classifier classifier;
@@ -78,7 +79,11 @@ public class EbSsBoost {
 		initWeights();
 		trainClassifiersPool();
 		classifyUnlabelledByPool();
+		
 		sampleDataForBoostClassifier();
+		
+		//Fazer rotulação de instancias com o pool
+		
 		// parei aqui
 
 	}
@@ -120,9 +125,10 @@ public class EbSsBoost {
 		
 		InstanceResult result;
 		int count = 0;
-		
-		//COLOCAR ISSO COMO ITERATOR
-		for (MyInstance m : this.testSet.getMyInstances()) {	
+		Iterator<MyInstance> iterator = this.testSet.getMyInstances().iterator();
+	
+		while(iterator.hasNext()) {
+			MyInstance m = iterator.next();
 			if (m.getInstanceClass() == -1) {
 				result = new InstanceResult(m.getInstance());
 				
@@ -134,42 +140,37 @@ public class EbSsBoost {
 					count++;
 				}
 			}
-			
 		}
-		System.out.println("rotuladas pelo pool: " + count + "\n\n");
+		System.out.println("rotuladas pelo pool: " + count + "\n");
 
 	}
 
 	private void sampleDataForBoostClassifier() {
+		
+		this.boostSubSet = new Dataset(tempSet.getInstances());
+		this.boostSubSet.clearInstances();
+		
 		//building the tempSet for weighted draw on it
-		Instances boostSubset = new Instances(tempSet.getInstances());
-		boostSubset.clear();
-		ArrayList<MyInstance> myInstances = new ArrayList<MyInstance>();
-		
-		
 		for(MyInstance m: this.testSet.getMyInstances()) {
 			if(m.getInstanceClass() != -1.0 || m.getResult().getBestAgreement() >= this.agreementValue) {
-				MyInstance mNew = new MyInstance(m.getInstance());
-				mNew.setInstanceClass(m.getInstanceClass());
-				mNew.setWeight(m.getWeight());				
-				
-				this.tempSet.getMyInstances().add(mNew);
-				this.tempSet.increaseTotalWeight(mNew.getWeight());
+				MyInstance mNew = new MyInstance(m);
+				this.tempSet.addMyInstance(mNew);
 			}
 		}
-
-		Dataset d = new Dataset(boostSubset);
 		
-		while(d.getMyInstances().size() < this.boostSubsetAmount) {
-			d.addMyInstance(this.tempSet.drawOne(random));
+		while(this.boostSubSet.getMyInstances().size() < this.boostSubsetAmount) {
+			this.boostSubSet.addMyInstance(this.tempSet.drawOne(random));
 		}
 		
 		
 		System.out.println(tempSet.getInstances().size() + "\n\n");
+		System.out.println(this.tempSet.getMyInstancesSummary());
 		
-		System.out.println(myInstances.size() + "\n\n");
-		
-		System.out.println(this.testSet.getMyInstancesSummary());
+		System.out.println("----------------------------------\n");
+		System.out.println("o subset do boost precisa ter: " + this.boostSubsetAmount);
+		System.out.println("ele tem: " + this.boostSubSet.getInstances().size());
+		System.out.println("instancias sampleadas: \n");
+		System.out.println(this.boostSubSet.getMyInstancesSummary());
 	}
 	
 	private void populatePool() {

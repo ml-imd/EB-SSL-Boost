@@ -25,6 +25,13 @@ public class MyInstance {
 		this.instanceClass = -1.0;
 		this.weight = weight;
 	}
+	
+	public MyInstance(MyInstance myInstance) {
+		this.instance = myInstance.getInstance();
+		this.instanceClass = myInstance.getInstanceClass();
+		this.weight = myInstance.getWeight();
+		this.result = myInstance.getResult();
+	}
 
 	public void increaseWeight(Double value) {
 		this.weight += value;
@@ -79,12 +86,11 @@ public class MyInstance {
 		sb.append(instance.toString());
 		sb.append("]: ");
 		sb.append(NumberUtils.doubleToString(weight));
-		sb.append(" ; ");
+		sb.append(";");
 		sb.append(instanceClass);
-		sb.append(" ; ");
-		sb.append("#result: ");
+		sb.append(";");
+		sb.append("-> result: ");
 		sb.append(r);
-		sb.append(" #");
 		return sb.toString();
 		
 	}
