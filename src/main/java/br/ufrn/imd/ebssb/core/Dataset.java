@@ -1,6 +1,7 @@
 package br.ufrn.imd.ebssb.core;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 
 import weka.core.Instance;
@@ -15,6 +16,8 @@ public class Dataset {
 	private ArrayList<MyInstance> myInstances;
 	private double totalWeight;
 
+	private HashMap<String, Integer> positions;
+
 	public Dataset() {
 
 	}
@@ -26,6 +29,8 @@ public class Dataset {
 		this.totalWeight = -1.0;
 
 		matchInstancesAndMyInstances();
+
+		this.positions = new HashMap<String, Integer>();
 	}
 
 	public Dataset(Instances instances) {
@@ -34,6 +39,8 @@ public class Dataset {
 		this.totalWeight = -1.0;
 
 		matchInstancesAndMyInstances();
+
+		this.positions = new HashMap<String, Integer>();
 	}
 
 	public Dataset(Dataset dataset) {
@@ -42,6 +49,8 @@ public class Dataset {
 		this.totalWeight = -1.0;
 
 		matchInstancesAndMyInstances();
+
+		this.positions = new HashMap<String, Integer>();
 	}
 
 	public void shuffleInstances(int seed) {
@@ -56,7 +65,7 @@ public class Dataset {
 
 		this.myInstances.add(new MyInstance(a));
 	}
-	
+
 	public void addMyInstance(MyInstance myInstance) {
 
 		this.instances.add(myInstance.getInstance());
@@ -79,6 +88,7 @@ public class Dataset {
 
 		this.myInstances = new ArrayList<MyInstance>();
 		this.totalWeight = 0.0;
+		this.positions = new HashMap<String, Integer>();
 	}
 
 	public void initInstancesWeight(Double initialWeight) {
@@ -105,7 +115,7 @@ public class Dataset {
 		ArrayList<Dataset> splitedDataset = new ArrayList<Dataset>();
 		ArrayList<Instance> myData = new ArrayList<Instance>();
 		ArrayList<Instance> part = new ArrayList<Instance>();
-		
+
 		int size = dataset.getInstances().size() / numberOfParts;
 
 		for (Instance i : dataset.getInstances()) {
@@ -113,7 +123,7 @@ public class Dataset {
 		}
 		int i = 0;
 		int control = 0;
-		
+
 		for (i = 0; i < myData.size(); i++) {
 			part.add(myData.get(i));
 			if (part.size() == size) {
@@ -152,6 +162,42 @@ public class Dataset {
 		return new Dataset(ins);
 	}
 
+	public MyInstance drawOne(MyRandom myRandom) {
+
+		int aux = myRandom.nextInt((int) this.totalWeight);
+		MyInstance drawed = new MyInstance();
+
+		for (MyInstance m : this.myInstances) {
+			aux -= m.getWeight();
+			if (aux < 0) {
+				drawed = m;
+				break;
+			}
+		}
+		return drawed;
+	}
+
+	public String getMyInstancesSummary() {
+
+		StringBuilder sb = new StringBuilder();
+		sb.append(
+				"[        instance        ]: weight; instanceClass; -> result: {agreement per class}; bestClass; bestResult\n");
+		for (MyInstance m : myInstances) {
+			sb.append(m.toString());
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
+
+	public void storePositions() {
+		for(int i = 0; i < this.myInstances.size(); i++) {
+			myInstances.get(i).generateHashForInstance();
+			this.positions.put(myInstances.get(i).getHashId(), i);
+		}
+	}
+	
+	//GETTERS AND SETTERS
+	
 	public ArrayList<MyInstance> getMyInstances() {
 		return myInstances;
 	}
@@ -186,30 +232,13 @@ public class Dataset {
 		this.datasetName = datasetName;
 	}
 
-	public MyInstance drawOne(MyRandom myRandom) {
-
-		int aux = myRandom.nextInt((int) this.totalWeight);
-		MyInstance drawed = new MyInstance();
-		
-		for (MyInstance m : this.myInstances) {
-			aux -= m.getWeight();
-			if (aux < 0) {
-				drawed = m;
-				break;
-			}
-		}
-		return drawed;
+	public HashMap<String, Integer> getPositions() {
+		return positions;
 	}
 
-	public String getMyInstancesSummary() {
-
-		StringBuilder sb = new StringBuilder();
-
-		for (MyInstance m : myInstances) {
-			sb.append(m.toString());
-			sb.append("\n");
-		}
-		return sb.toString();
+	public void setPositions(HashMap<String, Integer> positions) {
+		this.positions = positions;
 	}
 
+	
 }

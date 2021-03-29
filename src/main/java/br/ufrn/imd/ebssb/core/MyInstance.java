@@ -1,5 +1,9 @@
 package br.ufrn.imd.ebssb.core;
 
+import java.util.Random;
+
+import org.apache.commons.codec.digest.DigestUtils;
+
 import br.ufrn.imd.ebssb.results.InstanceResult;
 import br.ufrn.imd.ebssb.utils.NumberUtils;
 import weka.core.Instance;
@@ -10,6 +14,8 @@ public class MyInstance {
 	private Double weight;
 	private Double instanceClass;
 	private InstanceResult result;
+	
+	private String hashId;
 	
 	public MyInstance() {
 		
@@ -31,6 +37,7 @@ public class MyInstance {
 		this.instanceClass = myInstance.getInstanceClass();
 		this.weight = myInstance.getWeight();
 		this.result = myInstance.getResult();
+		this.hashId = myInstance.getHashId();
 	}
 
 	public void increaseWeight(Double value) {
@@ -40,6 +47,13 @@ public class MyInstance {
 	public void decreaseWeight(Double value) {
 		this.weight -= value;
 	}
+	
+	public void generateHashForInstance() {
+		Random random = new Random();
+		this.hashId = new String(DigestUtils.sha256Hex(this.instance.toString()+random.nextDouble()));
+	}
+	
+	//GETTERS AND SETTERS
 	
 	public Instance getInstance() {
 		return instance;
@@ -72,6 +86,14 @@ public class MyInstance {
 	public void setResult(InstanceResult result) {
 		this.result = result;
 	}
+	
+	public String getHashId() {
+		return hashId;
+	}
+
+	public void setHashId(String hashId) {
+		this.hashId = hashId;
+	}
 
 	@Override
 	public String toString() {
@@ -84,7 +106,7 @@ public class MyInstance {
 		StringBuilder sb = new StringBuilder();
 		sb.append("[");
 		sb.append(instance.toString());
-		sb.append("]: ");
+		sb.append("]; ");
 		sb.append(NumberUtils.doubleToString(weight));
 		sb.append(";");
 		sb.append(instanceClass);
@@ -94,6 +116,8 @@ public class MyInstance {
 		return sb.toString();
 		
 	}
+	
+	
 	
 	
 }

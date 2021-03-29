@@ -20,7 +20,7 @@ public class EbSsBoost {
 	protected Dataset testSet;
 
 	protected Dataset labeledSet;
-	
+
 	protected Dataset boostSubSet;
 	protected Dataset tempSet;
 
@@ -29,20 +29,20 @@ public class EbSsBoost {
 	private ArrayList<Classifier> bc; // boost committee
 
 	protected ArrayList<Classifier> pool;
-	protected double agreementThreshold = 75; //agreement percent
-	protected int agreementValue; //number of votes - target
-	
+	protected double agreementThreshold = 75; // agreement percent
+	protected int agreementValue; // number of votes - target
+
 	protected int labeledSetPercentual = 10;
 	private Double initialWeight = 1.0;
-	
+
 	protected int goodClassifiedInstances = 0;
 	protected int missClassifiedInstances = 0;
 
 	protected int boostSubsetPercent = 20;
 	protected int boostSubsetAmount;
-	
+
 	protected MyRandom random;
-	
+
 	protected FoldResult result;
 	protected String history;
 	protected String iterationInfo;
@@ -52,40 +52,50 @@ public class EbSsBoost {
 		this.result = new FoldResult();
 		this.history = new String();
 		this.random = new MyRandom(seed);
-		
+
 		this.bc = new ArrayList<Classifier>();
 
 		this.validationSet = new Dataset(validationSet);
 		this.testSet = new Dataset(testSet);
 		this.tempSet = new Dataset(testSet);
 		this.tempSet.clearInstances();
-		
+
 		this.pool = new ArrayList<Classifier>();
 		populatePool();
 
 		buildTestSetByStratifiedSplit();
 		this.boostSubsetAmount = testSet.getInstances().size() * this.boostSubsetPercent / 100;
-		
+
+		initWeights();
+
 		System.out.println("testset tem: " + testSet.getInstances().size() + " instancias");
 		System.out.println("subset do boost deve ter: " + this.boostSubsetAmount + " instancias");
 	}
 
-	public void initWeights() {
+	private void initWeights() {
 		this.testSet.initInstancesWeight(initialWeight);
 	}
 
 	public void runEbSsBoost() throws Exception {
 
-		initWeights();
 		trainClassifiersPool();
 		classifyUnlabelledByPool();
-		
-		sampleDataForBoostClassifier();
-		
-		//Fazer rotulação de instancias com o pool
-		
-		// parei aqui
 
+		sampleDataForBoostClassifier();
+
+		pinLabelsInTestUsingPoolPredictions();
+
+		test();
+		
+		trainBoostClassifierWithBcSubSet();
+		
+		// Fazer rotulação de instancias com o pool - basta setar o
+		// MyInstance.instanceClass com a classe dada no result e mudar dentro da
+		// instancia
+		// talvez seja bom guardar o id da instancia dentro do testSet, já que ele n
+		// muda, assim faz acesso à instancia sampleada com O(1)
+
+		// parei aqui
 	}
 
 	/**
@@ -102,6 +112,9 @@ public class EbSsBoost {
 		Instances labelled = testSet.getInstances().testCV(10, 0);
 		Instances unlabelled = testSet.getInstances().trainCV(10, 0);
 
+		System.out.println("Labelled set size: " + labelled.size());
+		System.out.println("unbelled set size: " + unlabelled.size());
+
 		this.labeledSet = new Dataset(labelled);
 
 		this.testSet.clearInstances();
@@ -113,8 +126,11 @@ public class EbSsBoost {
 		for (Instance i : unlabelled) {
 			this.testSet.addInstance(i);
 		}
+		this.testSet.storePositions();
 	}
 
+	// método precisa ser observado pois o labelled set muda e vai precisar ser
+	// atualizado a cada iteração.
 	private void trainClassifiersPool() throws Exception {
 		for (Classifier c : pool) {
 			c.buildClassifier(this.labeledSet.getInstances());
@@ -122,21 +138,22 @@ public class EbSsBoost {
 	}
 
 	private void classifyUnlabelledByPool() throws Exception {
-		
+
 		InstanceResult result;
 		int count = 0;
 		Iterator<MyInstance> iterator = this.testSet.getMyInstances().iterator();
-	
-		while(iterator.hasNext()) {
+
+		while (iterator.hasNext()) {
 			MyInstance m = iterator.next();
 			if (m.getInstanceClass() == -1) {
 				result = new InstanceResult(m.getInstance());
-				
+
 				for (Classifier c : this.pool) {
 					result.addPrediction(c.classifyInstance(m.getInstance()));
 				}
 				m.setResult(result);
-				if(result.getBestAgreement() >= 15) {
+
+				if (result.getBestAgreement() >= 15) {
 					count++;
 				}
 			}
@@ -146,33 +163,98 @@ public class EbSsBoost {
 	}
 
 	private void sampleDataForBoostClassifier() {
-		
+
 		this.boostSubSet = new Dataset(tempSet.getInstances());
 		this.boostSubSet.clearInstances();
-		
-		//building the tempSet for weighted draw on it
-		for(MyInstance m: this.testSet.getMyInstances()) {
-			if(m.getInstanceClass() != -1.0 || m.getResult().getBestAgreement() >= this.agreementValue) {
+
+		// building the tempSet for performing the weighted draw over it
+		for (MyInstance m : this.testSet.getMyInstances()) {
+			if (m.getInstanceClass() != -1.0 || m.getResult().getBestAgreement() >= this.agreementValue) {
 				MyInstance mNew = new MyInstance(m);
 				this.tempSet.addMyInstance(mNew);
 			}
 		}
-		
-		while(this.boostSubSet.getMyInstances().size() < this.boostSubsetAmount) {
-			this.boostSubSet.addMyInstance(this.tempSet.drawOne(random));
+
+		// sampling
+		while (this.boostSubSet.getMyInstances().size() < this.boostSubsetAmount) {
+			MyInstance m = new MyInstance(this.tempSet.drawOne(random));
+			this.boostSubSet.addMyInstance(m);
+		}
+
+		Iterator<MyInstance> iterator = this.boostSubSet.getMyInstances().iterator();
+		// pin label inside instance within boostSubSet
+		while (iterator.hasNext()) {
+			MyInstance m = iterator.next();
+			// if the sampled instance is unlabelled, set label from pool in instance
+			if (m.getInstanceClass() == -1) {
+				// pin class in boostSubSet intance
+				m.getInstance().setClassValue(m.getResult().getBestClass());
+				m.setInstanceClass(m.getResult().getBestClass());
+			}
+		}
+
+		this.tempSet.clearInstances();
+
+	}
+
+	/**
+	 * this methods looks to the current boostSubSet and pins the label defined from
+	 * pool of classifiers.
+	 * 
+	 * if some instance sampled for current boostSubSet is unlabelled, then this
+	 * same label in test is pinned using class defined from pool.
+	 */
+	private void pinLabelsInTestUsingPoolPredictions() {
+		for (MyInstance m : this.boostSubSet.getMyInstances()) {
+			// if instance had not a label
+			if (m.getResult() != null) {
+				int i = this.testSet.getPositions().get(m.getHashId());
+				double classValue = this.testSet.getMyInstances().get(i).getResult().getBestClass();
+
+				this.testSet.getMyInstances().get(i).setInstanceClass(classValue);
+			}
+		}
+	}
+
+	private void trainBoostClassifierWithBcSubSet() {
+
+		// weka.classifiers.trees.J48 -C 0.05 -M 2 (74.4792)
+
+		J48 j48 = new J48();
+		try {
+			j48.setOptions(weka.core.Utils.splitOptions("-C 0.05 -M 2"));
+			j48.buildClassifier(this.boostSubSet.getInstances());
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		
+		this.bc.add(j48);
+
+	}
+
+	private void renewlabelledSet() {
 		
-		System.out.println(tempSet.getInstances().size() + "\n\n");
-		System.out.println(this.tempSet.getMyInstancesSummary());
-		
-		System.out.println("----------------------------------\n");
-		System.out.println("o subset do boost precisa ter: " + this.boostSubsetAmount);
-		System.out.println("ele tem: " + this.boostSubSet.getInstances().size());
-		System.out.println("instancias sampleadas: \n");
-		System.out.println(this.boostSubSet.getMyInstancesSummary());
 	}
 	
+
+	private void test() {
+
+		System.out.println("TEST SET SIZE: " + testSet.getInstances().size());
+		System.out.println();
+		System.out.println(this.testSet.getMyInstancesSummary());
+		System.out.println();
+
+		if (this.boostSubSet != null) {
+			System.out.println("BOOST SUBSET");
+			System.out.println("----------------------------------\n");
+			System.out.println("o subset do boost precisa ter: " + this.boostSubsetAmount);
+			System.out.println("ele tem: " + this.boostSubSet.getInstances().size());
+			System.out.println("instancias sampleadas: \n");
+			System.out.println(this.boostSubSet.getMyInstancesSummary());
+		}
+
+	}
+
 	private void populatePool() {
 		J48 j48a = new J48();
 		J48 j48b = new J48();
@@ -264,10 +346,9 @@ public class EbSsBoost {
 		this.pool.add(dt1);
 		this.pool.add(dt2);
 		this.pool.add(dt3);
-		
+
 		double agreementValue = pool.size() * agreementThreshold / 100;
 		this.agreementValue = (int) agreementValue;
 	}
 
 }
-
