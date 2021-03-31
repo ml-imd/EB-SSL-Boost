@@ -14,6 +14,7 @@ public class MyInstance {
 	private Double weight;
 	private Double instanceClass;
 	private InstanceResult result;
+	private InstanceResult boostEnsembleResult;
 	
 	private String hashId;
 	
@@ -94,6 +95,14 @@ public class MyInstance {
 	public void setHashId(String hashId) {
 		this.hashId = hashId;
 	}
+	
+	public InstanceResult getBoostEnsembleResult() {
+		return boostEnsembleResult;
+	}
+
+	public void setBoostEnsembleResult(InstanceResult boostEnsembleResult) {
+		this.boostEnsembleResult = boostEnsembleResult;
+	}
 
 	@Override
 	public String toString() {
@@ -108,9 +117,9 @@ public class MyInstance {
 		sb.append(instance.toString());
 		sb.append("]; ");
 		sb.append(NumberUtils.doubleToString(weight));
-		sb.append(";");
+		sb.append("; ");
 		sb.append(instanceClass);
-		sb.append(";");
+		sb.append("; ");
 		sb.append("-> result: ");
 		sb.append(r);
 		return sb.toString();

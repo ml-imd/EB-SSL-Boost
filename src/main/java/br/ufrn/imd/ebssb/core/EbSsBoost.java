@@ -19,7 +19,7 @@ public class EbSsBoost {
 	protected Dataset validationSet;
 	protected Dataset testSet;
 
-	protected Dataset labeledSet;
+	protected Dataset labelledSet;
 
 	protected Dataset boostSubSet;
 	protected Dataset tempSet;
@@ -27,6 +27,7 @@ public class EbSsBoost {
 	protected Classifier classifier;
 
 	private ArrayList<Classifier> bc; // boost committee
+	private int bcSize = 10;
 
 	protected ArrayList<Classifier> pool;
 	protected double agreementThreshold = 75; // agreement percent
@@ -34,6 +35,7 @@ public class EbSsBoost {
 
 	protected int labeledSetPercentual = 10;
 	private Double initialWeight = 1.0;
+	private Double weightRate;
 
 	protected int goodClassifiedInstances = 0;
 	protected int missClassifiedInstances = 0;
@@ -66,10 +68,8 @@ public class EbSsBoost {
 		buildTestSetByStratifiedSplit();
 		this.boostSubsetAmount = testSet.getInstances().size() * this.boostSubsetPercent / 100;
 
+		computeWeightRate();
 		initWeights();
-
-		System.out.println("testset tem: " + testSet.getInstances().size() + " instancias");
-		System.out.println("subset do boost deve ter: " + this.boostSubsetAmount + " instancias");
 	}
 
 	private void initWeights() {
@@ -78,17 +78,25 @@ public class EbSsBoost {
 
 	public void runEbSsBoost() throws Exception {
 
-		trainClassifiersPool();
-		classifyUnlabelledByPool();
+		while (this.bcSize > 0) {
+			
+			System.out.println("ITERAÇÂO ------------------> " + this.bcSize);
+			
+			trainClassifiersPool();
+			classifyUnlabelledByPool();
 
-		sampleDataForBoostClassifier();
+			sampleDataForBoostClassifier();
 
-		pinLabelsInTestUsingPoolPredictions();
+			pinLabelsInTestUsingPoolPredictions();
 
-		test();
-		
-		trainBoostClassifierWithBcSubSet();
-		
+			trainBoostClassifierWithBcSubSet();
+			renewlabelledAndUnlabelldSets();
+
+			testBcOverLabelledInstances();
+
+			//test();
+			this.bcSize--;
+		}
 		// Fazer rotulação de instancias com o pool - basta setar o
 		// MyInstance.instanceClass com a classe dada no result e mudar dentro da
 		// instancia
@@ -112,10 +120,7 @@ public class EbSsBoost {
 		Instances labelled = testSet.getInstances().testCV(10, 0);
 		Instances unlabelled = testSet.getInstances().trainCV(10, 0);
 
-		System.out.println("Labelled set size: " + labelled.size());
-		System.out.println("unbelled set size: " + unlabelled.size());
-
-		this.labeledSet = new Dataset(labelled);
+		this.labelledSet = new Dataset(labelled);
 
 		this.testSet.clearInstances();
 
@@ -133,14 +138,13 @@ public class EbSsBoost {
 	// atualizado a cada iteração.
 	private void trainClassifiersPool() throws Exception {
 		for (Classifier c : pool) {
-			c.buildClassifier(this.labeledSet.getInstances());
+			c.buildClassifier(this.labelledSet.getInstances());
 		}
 	}
 
 	private void classifyUnlabelledByPool() throws Exception {
 
 		InstanceResult result;
-		int count = 0;
 		Iterator<MyInstance> iterator = this.testSet.getMyInstances().iterator();
 
 		while (iterator.hasNext()) {
@@ -152,14 +156,8 @@ public class EbSsBoost {
 					result.addPrediction(c.classifyInstance(m.getInstance()));
 				}
 				m.setResult(result);
-
-				if (result.getBestAgreement() >= 15) {
-					count++;
-				}
 			}
 		}
-		System.out.println("rotuladas pelo pool: " + count + "\n");
-
 	}
 
 	private void sampleDataForBoostClassifier() {
@@ -194,7 +192,6 @@ public class EbSsBoost {
 		}
 
 		this.tempSet.clearInstances();
-
 	}
 
 	/**
@@ -227,29 +224,90 @@ public class EbSsBoost {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		this.bc.add(j48);
+	}
+
+	private void renewlabelledAndUnlabelldSets() {
+
+		this.labelledSet.clearInstances();
+		for (MyInstance m : this.testSet.getMyInstances()) {
+			if (m.getInstanceClass() != -1) {
+				this.labelledSet.addMyInstance(m);
+			}
+		}
+	}
+
+	private void testBcOverLabelledInstances() throws Exception {
+
+		InstanceResult result;
+		Iterator<MyInstance> iterator = this.testSet.getMyInstances().iterator();
+
+		int labelledInstances = 0;
+		int bcHit = 0;
+		int bcWrong = 0;
+
+		while (iterator.hasNext()) {
+			MyInstance m = iterator.next();
+
+			// if the instance is unlabelled
+			if (m.getInstanceClass() != -1) {
+				labelledInstances++;
+				result = new InstanceResult(m.getInstance());
+
+				// test it with the bc
+				for (Classifier c : this.bc) {
+					result.addPrediction(c.classifyInstance(m.getInstance()));
+				}
+				m.setBoostEnsembleResult(result);
+
+				// if the bc prediction is different of pinned label -> bc wrong and the weight
+				// is augmented
+				if (m.getBoostEnsembleResult().getBestClass().doubleValue() != m.getInstanceClass().doubleValue()) {
+					m.increaseWeight(this.weightRate);
+					this.testSet.increaseTotalWeight(this.weightRate);
+					bcWrong++;
+				}
+				// else, the bc predicted correctly and weight of the instance is decreased
+				else {
+					bcHit++;
+					if(m.getWeight().doubleValue() > 0.0) {
+						m.decreaseWeight(this.weightRate);
+						this.testSet.decreaseTotalWeight(this.weightRate);
+					}
+				}
+			}
+		}
+		System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+		System.out.println("labelled instances: " + labelledInstances);
+		System.out.println("bc hit: " + bcHit);
+		System.out.println("bc wrong: " + bcWrong);
+		System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 
 	}
 
-	private void renewlabelledSet() {
-		
+	private void computeWeightRate() {
+		this.weightRate = 1.0;
 	}
-	
 
 	private void test() {
 
 		System.out.println("TEST SET SIZE: " + testSet.getInstances().size());
+		System.out.println("LABELLED SET SIZE: " + this.labelledSet.getInstances().size() + "\n");
+		System.out.println("LAST BOOST SUBSET SIZE: " + boostSubSet.getInstances().size());
+		System.out.println("o subset do boost precisa ter: " + this.boostSubsetAmount);
 		System.out.println();
+
+		System.out.println("----------------------------------");
+		System.out.println("TEST SET");
+		System.out.println("----------------------------------");
 		System.out.println(this.testSet.getMyInstancesSummary());
 		System.out.println();
 
 		if (this.boostSubSet != null) {
+			System.out.println("----------------------------------");
 			System.out.println("BOOST SUBSET");
-			System.out.println("----------------------------------\n");
-			System.out.println("o subset do boost precisa ter: " + this.boostSubsetAmount);
-			System.out.println("ele tem: " + this.boostSubSet.getInstances().size());
-			System.out.println("instancias sampleadas: \n");
+			System.out.println("----------------------------------");
 			System.out.println(this.boostSubSet.getMyInstancesSummary());
 		}
 

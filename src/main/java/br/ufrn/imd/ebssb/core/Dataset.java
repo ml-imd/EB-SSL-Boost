@@ -100,6 +100,10 @@ public class Dataset {
 	public void increaseTotalWeight(double value) {
 		this.totalWeight += value;
 	}
+	
+	public void decreaseTotalWeight(double value) {
+		this.totalWeight -= value;
+	}
 
 	private void matchInstancesAndMyInstances() {
 		this.myInstances = new ArrayList<MyInstance>();
@@ -109,6 +113,42 @@ public class Dataset {
 			myInstances.add(m);
 		}
 	}
+
+	public MyInstance drawOne(MyRandom myRandom) {
+
+		int aux = myRandom.nextInt((int) this.totalWeight);
+		MyInstance drawed = new MyInstance();
+
+		for (MyInstance m : this.myInstances) {
+			aux -= m.getWeight();
+			if (aux < 0) {
+				drawed = m;
+				break;
+			}
+		}
+		return drawed;
+	}
+
+	public String getMyInstancesSummary() {
+
+		StringBuilder sb = new StringBuilder();
+		sb.append(
+				"[        instance        ]: weight; instanceClass; -> result: {agreement per class}; bestClass; bestResult\n");
+		for (MyInstance m : myInstances) {
+			sb.append(m.toString());
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
+
+	public void storePositions() {
+		for(int i = 0; i < this.myInstances.size(); i++) {
+			myInstances.get(i).generateHashForInstance();
+			this.positions.put(myInstances.get(i).getHashId(), i);
+		}
+	}
+
+	//STATIC METHODS
 
 	public static ArrayList<Dataset> splitDataset(Dataset dataset, int numberOfParts) {
 
@@ -162,39 +202,6 @@ public class Dataset {
 		return new Dataset(ins);
 	}
 
-	public MyInstance drawOne(MyRandom myRandom) {
-
-		int aux = myRandom.nextInt((int) this.totalWeight);
-		MyInstance drawed = new MyInstance();
-
-		for (MyInstance m : this.myInstances) {
-			aux -= m.getWeight();
-			if (aux < 0) {
-				drawed = m;
-				break;
-			}
-		}
-		return drawed;
-	}
-
-	public String getMyInstancesSummary() {
-
-		StringBuilder sb = new StringBuilder();
-		sb.append(
-				"[        instance        ]: weight; instanceClass; -> result: {agreement per class}; bestClass; bestResult\n");
-		for (MyInstance m : myInstances) {
-			sb.append(m.toString());
-			sb.append("\n");
-		}
-		return sb.toString();
-	}
-
-	public void storePositions() {
-		for(int i = 0; i < this.myInstances.size(); i++) {
-			myInstances.get(i).generateHashForInstance();
-			this.positions.put(myInstances.get(i).getHashId(), i);
-		}
-	}
 	
 	//GETTERS AND SETTERS
 	
@@ -240,5 +247,4 @@ public class Dataset {
 		this.positions = positions;
 	}
 
-	
 }
