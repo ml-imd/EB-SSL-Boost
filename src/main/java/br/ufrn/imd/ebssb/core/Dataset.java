@@ -133,9 +133,10 @@ public class Dataset {
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(
-				"[        instance        ]: weight; instanceClass; -> result: {agreement per class}; bestClass; bestResult\n");
-		for (MyInstance m : myInstances) {
-			sb.append(m.toString());
+				"id; [        instance        ]: weight; instanceClass; -> result: {agreement per class}; bestClass; bestResult\n");
+		for (int i = 0; i < myInstances.size();i++) {
+			//sb.append(getMyStancePosition(myInstances.get(i)) + "; ");
+			sb.append(myInstances.get(i).toString());
 			sb.append("\n");
 		}
 		return sb.toString();
@@ -145,9 +146,16 @@ public class Dataset {
 		for(int i = 0; i < this.myInstances.size(); i++) {
 			myInstances.get(i).generateHashForInstance();
 			this.positions.put(myInstances.get(i).getHashId(), i);
+			myInstances.get(i).setTestSetPosition(i);
 		}
 	}
 
+	public String getMyStancePosition(MyInstance m) {
+		int i = (positions.get(m.getHashId()));
+		String s = String.valueOf(i);
+		return s;
+	}
+	
 	//STATIC METHODS
 
 	public static ArrayList<Dataset> splitDataset(Dataset dataset, int numberOfParts) {

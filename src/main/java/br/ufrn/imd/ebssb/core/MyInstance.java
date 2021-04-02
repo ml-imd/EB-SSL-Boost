@@ -17,6 +17,7 @@ public class MyInstance {
 	private InstanceResult boostEnsembleResult;
 	
 	private String hashId;
+	private int testSetPosition;
 	
 	public MyInstance() {
 		
@@ -39,6 +40,7 @@ public class MyInstance {
 		this.weight = myInstance.getWeight();
 		this.result = myInstance.getResult();
 		this.hashId = myInstance.getHashId();
+		this.testSetPosition = myInstance.getTestSetPosition();
 	}
 
 	public void increaseWeight(Double value) {
@@ -103,6 +105,14 @@ public class MyInstance {
 	public void setBoostEnsembleResult(InstanceResult boostEnsembleResult) {
 		this.boostEnsembleResult = boostEnsembleResult;
 	}
+	
+	public int getTestSetPosition() {
+		return testSetPosition;
+	}
+
+	public void setTestSetPosition(int testSetPosition) {
+		this.testSetPosition = testSetPosition;
+	}
 
 	@Override
 	public String toString() {
@@ -113,7 +123,8 @@ public class MyInstance {
 		}
 		
 		StringBuilder sb = new StringBuilder();
-		sb.append("[");
+		sb.append(this.testSetPosition);
+		sb.append("; [");
 		sb.append(instance.toString());
 		sb.append("]; ");
 		sb.append(NumberUtils.doubleToString(weight));

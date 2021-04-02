@@ -15,7 +15,6 @@ public class InstanceResult{
 	private Integer bestAgreement;
 	private Double factor;
 	
-	
 	public InstanceResult() {
 		
 	}
@@ -100,9 +99,9 @@ public class InstanceResult{
 	public String getResultSummary() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(agreementsPerClass.toString());
-		sb.append(";");
+		sb.append("; ");
 		sb.append(bestClass);
-		sb.append(";");
+		sb.append("; ");
 		sb.append(bestAgreement);
 
 		return sb.toString();

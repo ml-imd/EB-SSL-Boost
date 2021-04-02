@@ -5,6 +5,7 @@ import java.util.Iterator;
 
 import br.ufrn.imd.ebssb.results.FoldResult;
 import br.ufrn.imd.ebssb.results.InstanceResult;
+import br.ufrn.imd.ebssb.results.IterationInfo;
 import weka.classifiers.Classifier;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.functions.SMO;
@@ -47,7 +48,7 @@ public class EbSsBoost {
 
 	protected FoldResult result;
 	protected String history;
-	protected String iterationInfo;
+	protected IterationInfo iterationInfo;
 
 	public EbSsBoost(Dataset testSet, Dataset validationSet, int seed) {
 
@@ -72,15 +73,11 @@ public class EbSsBoost {
 		initWeights();
 	}
 
-	private void initWeights() {
-		this.testSet.initInstancesWeight(initialWeight);
-	}
-
 	public void runEbSsBoost() throws Exception {
 
-		while (this.bcSize > 0) {
+		while (this.bc.size() < this.bcSize) {
 			
-			System.out.println("ITERAÇÂO ------------------> " + this.bcSize);
+			this.iterationInfo = new IterationInfo();
 			
 			trainClassifiersPool();
 			classifyUnlabelledByPool();
@@ -93,19 +90,17 @@ public class EbSsBoost {
 			renewlabelledAndUnlabelldSets();
 
 			testBcOverLabelledInstances();
-
+			
+			this.result.addIterationInfo(iterationInfo);
 			//test();
-			this.bcSize--;
 		}
-		// Fazer rotulação de instancias com o pool - basta setar o
-		// MyInstance.instanceClass com a classe dada no result e mudar dentro da
-		// instancia
-		// talvez seja bom guardar o id da instancia dentro do testSet, já que ele n
-		// muda, assim faz acesso à instancia sampleada com O(1)
-
-		// parei aqui
+		System.out.println(this.result.foldResultSummarytable());
 	}
-
+	
+	private void initWeights() {
+		this.testSet.initInstancesWeight(initialWeight);
+	}
+	
 	/**
 	 * Build test set following proportions between labelled and unlabelled
 	 * instances within testSet. After the built, the unlabelled myInstances will
@@ -131,11 +126,14 @@ public class EbSsBoost {
 		for (Instance i : unlabelled) {
 			this.testSet.addInstance(i);
 		}
+		
 		this.testSet.storePositions();
+
+		//Log info
+		this.storeSizes(labelled.size(), unlabelled.size(), this.validationSet.getInstances().size());
 	}
 
-	// método precisa ser observado pois o labelled set muda e vai precisar ser
-	// atualizado a cada iteração.
+	//método precisa ser observado pois o labelled set muda e vai precisar ser atualizado a cada iteração.
 	private void trainClassifiersPool() throws Exception {
 		for (Classifier c : pool) {
 			c.buildClassifier(this.labelledSet.getInstances());
@@ -143,7 +141,6 @@ public class EbSsBoost {
 	}
 
 	private void classifyUnlabelledByPool() throws Exception {
-
 		InstanceResult result;
 		Iterator<MyInstance> iterator = this.testSet.getMyInstances().iterator();
 
@@ -164,7 +161,7 @@ public class EbSsBoost {
 
 		this.boostSubSet = new Dataset(tempSet.getInstances());
 		this.boostSubSet.clearInstances();
-
+		
 		// building the tempSet for performing the weighted draw over it
 		for (MyInstance m : this.testSet.getMyInstances()) {
 			if (m.getInstanceClass() != -1.0 || m.getResult().getBestAgreement() >= this.agreementValue) {
@@ -190,8 +187,10 @@ public class EbSsBoost {
 				m.setInstanceClass(m.getResult().getBestClass());
 			}
 		}
-
 		this.tempSet.clearInstances();
+
+		//Log info
+		this.iterationInfo.setBoostSubSetSize(this.boostSubSet.getMyInstances().size());
 	}
 
 	/**
@@ -202,6 +201,7 @@ public class EbSsBoost {
 	 * same label in test is pinned using class defined from pool.
 	 */
 	private void pinLabelsInTestUsingPoolPredictions() {
+		int c = 0;
 		for (MyInstance m : this.boostSubSet.getMyInstances()) {
 			// if instance had not a label
 			if (m.getResult() != null) {
@@ -209,8 +209,12 @@ public class EbSsBoost {
 				double classValue = this.testSet.getMyInstances().get(i).getResult().getBestClass();
 
 				this.testSet.getMyInstances().get(i).setInstanceClass(classValue);
+				c++;
 			}
 		}
+		
+		//Log info
+		this.iterationInfo.setInstancesSampledAndLabelledByPool(c);
 	}
 
 	private void trainBoostClassifierWithBcSubSet() {
@@ -250,7 +254,7 @@ public class EbSsBoost {
 		while (iterator.hasNext()) {
 			MyInstance m = iterator.next();
 
-			// if the instance is unlabelled
+			// if the instance is labelled
 			if (m.getInstanceClass() != -1) {
 				labelledInstances++;
 				result = new InstanceResult(m.getInstance());
@@ -271,21 +275,33 @@ public class EbSsBoost {
 				// else, the bc predicted correctly and weight of the instance is decreased
 				else {
 					bcHit++;
-					if(m.getWeight().doubleValue() > 0.0) {
-						m.decreaseWeight(this.weightRate);
-						this.testSet.decreaseTotalWeight(this.weightRate);
-					}
 				}
 			}
 		}
-		System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-		System.out.println("labelled instances: " + labelledInstances);
-		System.out.println("bc hit: " + bcHit);
-		System.out.println("bc wrong: " + bcWrong);
-		System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+		
+		this.iterationInfo.setBoostEnsembleErrors(bcWrong);
+		this.iterationInfo.setBoostEnsembleHits(bcHit);
+		this.iterationInfo.setLabelledInstances(labelledInstances);
+		this.iterationInfo.setUnlabelledInstances(this.testSet.getInstances().size() - labelledInstances);
+		this.iterationInfo.setBoostSubSetSize(this.boostSubSet.getInstances().size());
+		
+		this.iterationInfo.setBoostSubsetSummary(this.boostSubSet.getMyInstancesSummary());
+		this.iterationInfo.setTestSetSummary(this.testSet.getMyInstancesSummary());
+				
+		//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+		//System.out.println("labelled instances: " + labelledInstances);
+		//System.out.println("bc hit: " + bcHit);
+		//System.out.println("bc wrong: " + bcWrong);
+		//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 
 	}
 
+	private void storeSizes(int labelledSetSize, int unlabelledSetSize, int validationSetSize) {
+		this.result.setLabelledSetSize(labelledSetSize);
+		this.result.setUnlabelledSetSize(unlabelledSetSize);
+		this.result.setValidationSetSize(validationSetSize);
+	}
+	
 	private void computeWeightRate() {
 		this.weightRate = 1.0;
 	}
@@ -310,7 +326,6 @@ public class EbSsBoost {
 			System.out.println("----------------------------------");
 			System.out.println(this.boostSubSet.getMyInstancesSummary());
 		}
-
 	}
 
 	private void populatePool() {

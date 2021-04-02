@@ -39,7 +39,7 @@ public class Teste {
 					foldsForTest.add(folds.get(j));
 				}
 			}
-
+			
 			EbSsBoost ssBoost = new EbSsBoost(Dataset.joinDatasets(foldsForTest), validation, seed);
 			ssBoost.runEbSsBoost();
 			break;
@@ -50,7 +50,7 @@ public class Teste {
 		String basePath = new String("src/main/resources/datasets/experiment_test/");
 
 		ArrayList<String> sources = new ArrayList<String>();
-		sources.add("Abalone.arff");
+		sources.add("Iris.arff");
 
 		for (String s : sources) {
 			Dataset d;
