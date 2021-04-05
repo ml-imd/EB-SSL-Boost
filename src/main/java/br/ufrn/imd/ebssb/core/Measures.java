@@ -10,14 +10,6 @@ import weka.core.Instances;
 
 public class Measures implements Serializable {
 
-	public void sum(Measures b) {
-		for (int i = 0; i < precision.length; i++) {
-			precision[i] += b.precision[i];
-			recall[i] += b.recall[i];
-			fmeasure[i] += b.fmeasure[i];
-		}
-	}
-
 	private static final long serialVersionUID = 1L;
 
 	private double[] precision;
@@ -108,6 +100,14 @@ public class Measures implements Serializable {
 		return fMeasure(pwavg, rwavg);
 	}
 
+	public void sum(Measures b) {
+		for (int i = 0; i < precision.length; i++) {
+			precision[i] += b.precision[i];
+			recall[i] += b.recall[i];
+			fmeasure[i] += b.fmeasure[i];
+		}
+	}
+	
 	public String toSummary() {
 		int maxLength = 15;
 		for (String str : labels) {

@@ -3,6 +3,7 @@ package br.ufrn.imd.ebssb.core;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import br.ufrn.imd.ebssb.metrics.Prediction;
 import br.ufrn.imd.ebssb.results.FoldResult;
 import br.ufrn.imd.ebssb.results.InstanceResult;
 import br.ufrn.imd.ebssb.results.IterationInfo;
@@ -76,9 +77,9 @@ public class EbSsBoost {
 	public void runEbSsBoost() throws Exception {
 
 		while (this.bc.size() < this.bcSize) {
-			
+
 			this.iterationInfo = new IterationInfo();
-			
+
 			trainClassifiersPool();
 			classifyUnlabelledByPool();
 
@@ -90,17 +91,18 @@ public class EbSsBoost {
 			renewlabelledAndUnlabelldSets();
 
 			testBcOverLabelledInstances();
-			
+
 			this.result.addIterationInfo(iterationInfo);
-			//test();
+			// test();
 		}
 		System.out.println(this.result.foldResultSummarytable());
+		testBC();
 	}
-	
+
 	private void initWeights() {
 		this.testSet.initInstancesWeight(initialWeight);
 	}
-	
+
 	/**
 	 * Build test set following proportions between labelled and unlabelled
 	 * instances within testSet. After the built, the unlabelled myInstances will
@@ -126,14 +128,15 @@ public class EbSsBoost {
 		for (Instance i : unlabelled) {
 			this.testSet.addInstance(i);
 		}
-		
+
 		this.testSet.storePositions();
 
-		//Log info
+		// Log info
 		this.storeSizes(labelled.size(), unlabelled.size(), this.validationSet.getInstances().size());
 	}
 
-	//método precisa ser observado pois o labelled set muda e vai precisar ser atualizado a cada iteração.
+	// método precisa ser observado pois o labelled set muda e vai precisar ser
+	// atualizado a cada iteração.
 	private void trainClassifiersPool() throws Exception {
 		for (Classifier c : pool) {
 			c.buildClassifier(this.labelledSet.getInstances());
@@ -161,7 +164,7 @@ public class EbSsBoost {
 
 		this.boostSubSet = new Dataset(tempSet.getInstances());
 		this.boostSubSet.clearInstances();
-		
+
 		// building the tempSet for performing the weighted draw over it
 		for (MyInstance m : this.testSet.getMyInstances()) {
 			if (m.getInstanceClass() != -1.0 || m.getResult().getBestAgreement() >= this.agreementValue) {
@@ -189,7 +192,7 @@ public class EbSsBoost {
 		}
 		this.tempSet.clearInstances();
 
-		//Log info
+		// Log info
 		this.iterationInfo.setBoostSubSetSize(this.boostSubSet.getMyInstances().size());
 	}
 
@@ -212,8 +215,8 @@ public class EbSsBoost {
 				c++;
 			}
 		}
-		
-		//Log info
+
+		// Log info
 		this.iterationInfo.setInstancesSampledAndLabelledByPool(c);
 	}
 
@@ -278,21 +281,21 @@ public class EbSsBoost {
 				}
 			}
 		}
-		
+
 		this.iterationInfo.setBoostEnsembleErrors(bcWrong);
 		this.iterationInfo.setBoostEnsembleHits(bcHit);
 		this.iterationInfo.setLabelledInstances(labelledInstances);
 		this.iterationInfo.setUnlabelledInstances(this.testSet.getInstances().size() - labelledInstances);
 		this.iterationInfo.setBoostSubSetSize(this.boostSubSet.getInstances().size());
-		
+
 		this.iterationInfo.setBoostSubsetSummary(this.boostSubSet.getMyInstancesSummary());
 		this.iterationInfo.setTestSetSummary(this.testSet.getMyInstancesSummary());
-				
-		//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-		//System.out.println("labelled instances: " + labelledInstances);
-		//System.out.println("bc hit: " + bcHit);
-		//System.out.println("bc wrong: " + bcWrong);
-		//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+
+		// System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+		// System.out.println("labelled instances: " + labelledInstances);
+		// System.out.println("bc hit: " + bcHit);
+		// System.out.println("bc wrong: " + bcWrong);
+		// System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 
 	}
 
@@ -301,9 +304,28 @@ public class EbSsBoost {
 		this.result.setUnlabelledSetSize(unlabelledSetSize);
 		this.result.setValidationSetSize(validationSetSize);
 	}
-	
+
 	private void computeWeightRate() {
 		this.weightRate = 1.0;
+	}
+
+	private void testBC() throws Exception {
+		Prediction pred = new Prediction(this.validationSet);
+		InstanceResult result;
+		for (Instance i : this.validationSet.getInstances()) {
+			result = new InstanceResult(i);
+			for (Classifier c : this.bc) {
+				result.addPrediction(c.classifyInstance(i));
+			}
+			pred.addPrediction(i.classValue(), result.getBestClass());
+		}
+		//this.validationSet.getInstances().class
+		
+		System.out.println(pred.getMatrix().toString("TESTE"));
+		System.out.println(pred.getTotalIntances());
+		System.out.println();
+		System.out.println(pred.getMatrix().getTwoClassStats(2));
+		System.out.println(this.validationSet.getInstances());
 	}
 
 	private void test() {

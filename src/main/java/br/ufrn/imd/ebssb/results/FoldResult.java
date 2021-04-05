@@ -128,6 +128,14 @@ public class FoldResult {
 		sb.append("Initial Unlabelled set size: " + this.unlabelledSetSize + "\n");
 		sb.append("Initial Validation set size: " + this.validationSetSize + "\n");
 		sb.append("------------------------------------------------------------------------------------------------\n");
+		sb.append("In each iteration, info means: \n");
+		sb.append("info1: labelled instances amount; \n");
+		sb.append("info2: unlabelled instances amount; \n");
+		sb.append("info3: instances sampled and with high agreement; \n");
+		sb.append("info4: boost subset size; \n");
+		sb.append("info5: Boost ensemble hits; \n");
+		sb.append("info6: Boost ensemble errors. \n");
+		sb.append("------------------------------------------------------------------------------------------------\n");
 		sb.append("\t\t");
 		sb.append("info1" + "\t");
 		sb.append("info2 " + "\t");
