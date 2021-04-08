@@ -1,5 +1,7 @@
 package br.ufrn.imd.ebssb.metrics;
 
+import weka.classifiers.evaluation.TwoClassStats;
+
 public class ClassMetrics {
 
 	private int classIndex;
@@ -8,10 +10,26 @@ public class ClassMetrics {
 	private double recall;
 	private double precision;
 	private double fMeasure;
-	
+	private TwoClassStats twoClassStats;
+
 	public ClassMetrics(int classIndex) {
 		this.classIndex = classIndex;
 	}
+
+	public void getMetricsFromTwoClassStats() {
+		this.accuracy = computeAccuracy();
+		this.recall	= this.twoClassStats.getRecall();
+		this.precision = this.twoClassStats.getPrecision();
+		this.fMeasure = this.twoClassStats.getFMeasure();
+	}
+	
+	private double computeAccuracy() {
+		double acc = this.twoClassStats.getTruePositive() + this.twoClassStats.getTrueNegative();
+		double acc2 = this.twoClassStats.getTruePositive() + this.twoClassStats.getFalsePositive() + this.twoClassStats.getTrueNegative() + this.twoClassStats.getFalseNegative();
+		return acc / acc2;
+	} 
+	
+	// GETTERS AND SETTERS
 
 	public int getClassIndex() {
 		return classIndex;
@@ -60,5 +78,18 @@ public class ClassMetrics {
 	public void setfMeasure(double fMeasure) {
 		this.fMeasure = fMeasure;
 	}
+	public TwoClassStats getTwoClassStats() {
+		return twoClassStats;
+	}
+
+	public void setTwoClassStats(TwoClassStats twoClassStats) {
+		this.twoClassStats = twoClassStats;
+		getMetricsFromTwoClassStats();
+	}
 	
+	public String getMatrix() {
+		return this.twoClassStats.getConfusionMatrix().toString(this.className);
+		
+	}
+
 }

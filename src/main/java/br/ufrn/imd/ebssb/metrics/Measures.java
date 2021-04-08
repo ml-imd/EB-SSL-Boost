@@ -1,12 +1,9 @@
-package br.ufrn.imd.ebssb.core;
+package br.ufrn.imd.ebssb.metrics;
 
 import java.io.Serializable;
-import java.util.Random;
 
-import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.core.Attribute;
-import weka.core.Instances;
 
 public class Measures implements Serializable {
 
@@ -19,44 +16,51 @@ public class Measures implements Serializable {
 	private String[] labels;
 	private double accuracy;
 	private double error;
-	
-	public Measures(Classifier classifier, Instances train, Instances test) throws Exception {
-		Evaluation eval = new Evaluation(train);
-		eval.evaluateModel(classifier, test);
-		init(eval, test);
+
+	public Measures(Prediction prediction) throws Exception {
+		Evaluation eval = new Evaluation(prediction.getDataset().getInstances());
+		init(eval, prediction);
 	}
 
-	public Measures(Classifier classifier, Instances instances, int numFolds, Random rand) throws Exception {
-		Evaluation eval = new Evaluation(instances);
-		eval.crossValidateModel(classifier, instances, numFolds, rand);
-		init(eval, instances);
-	}
+	private void init(Evaluation eval, Prediction prediction) {
+		int numClasses = prediction.getDataset().getInstances().numClasses();
+		double numInstances = prediction.getDataset().getInstances().numInstances();
 
-	private void init(Evaluation eval, Instances instances) {
-		int numClasses = instances.numClasses();
-		double numInstances = instances.numInstances();
 		precision = new double[numClasses];
 		recall = new double[numClasses];
 		fmeasure = new double[numClasses];
-		accuracy = eval.pctCorrect();
-		error = eval.pctIncorrect();
-		
+
+		accuracy = calcAccuracy(prediction.getMatrix().correct(), prediction.getDataset().getInstances().size());
+		error = calcError(prediction.getMatrix().incorrect(), prediction.getDataset().getInstances().size());
+
 		classesDistribution = eval.getClassPriors();
 		for (int i = 0; i < numClasses; i++) {
-			precision[i] = correctValue(eval.precision(i));
-			recall[i] = correctValue (eval.recall(i));
-			fmeasure[i] = correctValue (eval.fMeasure(i));
-			classesDistribution[i] /= numInstances;
+			precision[i] = correctValue(prediction.getClassesMetrics().get(i).getPrecision());
+			recall[i] = correctValue(prediction.getClassesMetrics().get(i).getRecall());
+			fmeasure[i] = correctValue(prediction.getClassesMetrics().get(i).getRecall());
+			classesDistribution[i] /= (numInstances + numClasses);
 		}
 
-		Attribute att = instances.classAttribute();
+		Attribute att = prediction.getDataset().getInstances().classAttribute();
 		labels = new String[numClasses];
 		for (int i = 0; i < numClasses; i++) {
 			labels[i] = att.value(i);
 		}
 	}
-	
-	private double correctValue (double value) {
+
+	private double calcAccuracy(double totalCorrect, int totalInstances) {
+		double correct = totalCorrect;
+		double total = totalInstances;
+		return (correct / total) * 100;
+	}
+
+	private double calcError(double totalncorrect, int totalInstances) {
+		double incorrect = totalncorrect;
+		double total = totalInstances;
+		return (incorrect / total) * 100;
+	}
+
+	private double correctValue(double value) {
 		return Double.isNaN(value) ? 0 : value;
 	}
 
@@ -107,7 +111,7 @@ public class Measures implements Serializable {
 			fmeasure[i] += b.fmeasure[i];
 		}
 	}
-	
+
 	public String toSummary() {
 		int maxLength = 15;
 		for (String str : labels) {
@@ -155,6 +159,8 @@ public class Measures implements Serializable {
 		return avg;
 	}
 
+	// GETTER E SETTERS
+
 	public double getAccuracy() {
 		return accuracy;
 	}
@@ -170,6 +176,16 @@ public class Measures implements Serializable {
 	public void setError(double error) {
 		this.error = error;
 	}
-	
-	
+
+	/*
+	 * Evaluation eval = new Evaluation(validation.getInstances());
+	 * System.out.println("----------------------"); for(Instance inst:
+	 * validation.getInstances()) { System.out.println(inst.weight() + " -- " +
+	 * inst.classValue()); } System.out.println("----------------------");
+	 * System.out.println(validation.getMyInstances().size());
+	 * System.out.println(validation.getInstances().size()); double[] d =
+	 * eval.getClassPriors(); for(int z = 0; z < d.length; z++) {
+	 * System.out.println( d[z] ); } break;
+	 */
+
 }

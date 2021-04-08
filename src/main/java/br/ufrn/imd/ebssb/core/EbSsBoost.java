@@ -3,6 +3,7 @@ package br.ufrn.imd.ebssb.core;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import br.ufrn.imd.ebssb.metrics.Measures;
 import br.ufrn.imd.ebssb.metrics.Prediction;
 import br.ufrn.imd.ebssb.results.FoldResult;
 import br.ufrn.imd.ebssb.results.InstanceResult;
@@ -134,9 +135,11 @@ public class EbSsBoost {
 		// Log info
 		this.storeSizes(labelled.size(), unlabelled.size(), this.validationSet.getInstances().size());
 	}
-
-	// método precisa ser observado pois o labelled set muda e vai precisar ser
-	// atualizado a cada iteração.
+	
+	/** 
+	 * método precisa ser observado pois o labelled set muda e vai precisar ser
+	 * atualizado a cada iteração.
+	*/
 	private void trainClassifiersPool() throws Exception {
 		for (Classifier c : pool) {
 			c.buildClassifier(this.labelledSet.getInstances());
@@ -291,12 +294,6 @@ public class EbSsBoost {
 		this.iterationInfo.setBoostSubsetSummary(this.boostSubSet.getMyInstancesSummary());
 		this.iterationInfo.setTestSetSummary(this.testSet.getMyInstancesSummary());
 
-		// System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-		// System.out.println("labelled instances: " + labelledInstances);
-		// System.out.println("bc hit: " + bcHit);
-		// System.out.println("bc wrong: " + bcWrong);
-		// System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-
 	}
 
 	private void storeSizes(int labelledSetSize, int unlabelledSetSize, int validationSetSize) {
@@ -311,43 +308,24 @@ public class EbSsBoost {
 
 	private void testBC() throws Exception {
 		Prediction pred = new Prediction(this.validationSet);
-		InstanceResult result;
+		InstanceResult ir;
 		for (Instance i : this.validationSet.getInstances()) {
-			result = new InstanceResult(i);
+			ir = new InstanceResult(i);
 			for (Classifier c : this.bc) {
-				result.addPrediction(c.classifyInstance(i));
+				ir.addPrediction(c.classifyInstance(i));
 			}
-			pred.addPrediction(i.classValue(), result.getBestClass());
+			pred.addPrediction(i.classValue(), ir.getBestClass());
 		}
-		//this.validationSet.getInstances().class
+		pred.buildMetrics();
 		
-		System.out.println(pred.getMatrix().toString("TESTE"));
-		System.out.println(pred.getTotalIntances());
-		System.out.println();
-		System.out.println(pred.getMatrix().getTwoClassStats(2));
-		System.out.println(this.validationSet.getInstances());
-	}
-
-	private void test() {
-
-		System.out.println("TEST SET SIZE: " + testSet.getInstances().size());
-		System.out.println("LABELLED SET SIZE: " + this.labelledSet.getInstances().size() + "\n");
-		System.out.println("LAST BOOST SUBSET SIZE: " + boostSubSet.getInstances().size());
-		System.out.println("o subset do boost precisa ter: " + this.boostSubsetAmount);
-		System.out.println();
-
-		System.out.println("----------------------------------");
-		System.out.println("TEST SET");
-		System.out.println("----------------------------------");
-		System.out.println(this.testSet.getMyInstancesSummary());
-		System.out.println();
-
-		if (this.boostSubSet != null) {
-			System.out.println("----------------------------------");
-			System.out.println("BOOST SUBSET");
-			System.out.println("----------------------------------");
-			System.out.println(this.boostSubSet.getMyInstancesSummary());
-		}
+		Measures measures = new Measures(pred);
+		
+		result.setAccuracy(measures.getAccuracy());
+		result.setError(measures.getError());
+		result.setfMeasure(measures.getFmeasureMean());
+		result.setPrecision(measures.getPrecisionMean()); 
+		result.setRecall(measures.getRecallMean());
+		
 	}
 
 	private void populatePool() {

@@ -12,7 +12,7 @@ public class Prediction {
 	private Dataset dataset;
 	private ArrayList<ClassMetrics> classesMetrics;
 
-	public int totalIntances = 0;
+	private int totalIntances = 0;
 
 	public Prediction(Dataset d) {
 		this.classesMetrics = new ArrayList<ClassMetrics>();
@@ -50,6 +50,14 @@ public class Prediction {
 		return ss;
 	}
 
+	public void buildMetrics() {
+		for(int i = 0; i < classesMetrics.size(); i++) {
+			classesMetrics.get(i).setTwoClassStats(matrix.getTwoClassStats(i));
+		}
+	}
+	
+	//GETTERS AND SETTERS
+	
 	public ConfusionMatrix getMatrix() {
 		return matrix;
 	}
