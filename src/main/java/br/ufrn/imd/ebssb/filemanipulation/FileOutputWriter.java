@@ -36,14 +36,19 @@ public class FileOutputWriter {
 	    fileName = new String(sb.toString());
 	}
 
-	public void addContentline(String line){
+	public void addContent(String string) {
+		toText.append(string);
+		toText.append(" ");
+	}
+	
+	public void addContentLine(String line){
 		toText.append(line);
 		toText.append("\n");
 	}
 	
 	public void addContentLines(List<String> lines) {
 		for(String line: lines) {
-			addContentline(line);
+			addContentLine(line);
 		}
 	}
 	
@@ -56,7 +61,11 @@ public class FileOutputWriter {
 	
 	public void saveAndClose() throws IOException {
 		this.fos.close();
-	    System.out.println("Arquivo: " + fileName + " salvo!\n" );
+	    System.out.println("Arquivo: " + fileName + " salvo!" );
+	}
+	
+	public void clearWriterContent() {
+		this.toText = new StringBuilder();
 	}
 	
 }

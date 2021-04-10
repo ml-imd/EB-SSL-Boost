@@ -19,43 +19,35 @@ import weka.core.Instances;
 
 public class EbSsBoost {
 
-	protected Dataset validationSet;
-	protected Dataset testSet;
+	private Dataset validationSet;
+	private Dataset testSet;
 
-	protected Dataset labelledSet;
+	private Dataset labelledSet;
 
-	protected Dataset boostSubSet;
-	protected Dataset tempSet;
-
-	protected Classifier classifier;
+	private Dataset boostSubSet;
+	private Dataset tempSet;
 
 	private ArrayList<Classifier> bc; // boost committee
 	private int bcSize = 10;
 
-	protected ArrayList<Classifier> pool;
-	protected double agreementThreshold = 75; // agreement percent
-	protected int agreementValue; // number of votes - target
+	private ArrayList<Classifier> pool;
+	private double agreementThreshold = 75; // agreement percent
+	private int agreementValue; // number of votes - target
 
-	protected int labeledSetPercentual = 10;
 	private Double initialWeight = 1.0;
 	private Double weightRate;
 
-	protected int goodClassifiedInstances = 0;
-	protected int missClassifiedInstances = 0;
+	private int boostSubsetPercent = 20;
+	private int boostSubsetAmount;
 
-	protected int boostSubsetPercent = 20;
-	protected int boostSubsetAmount;
+	private MyRandom random;
 
-	protected MyRandom random;
-
-	protected FoldResult result;
-	protected String history;
-	protected IterationInfo iterationInfo;
+	private FoldResult foldResult;
+	private IterationInfo iterationInfo;
 
 	public EbSsBoost(Dataset testSet, Dataset validationSet, int seed) {
 
-		this.result = new FoldResult();
-		this.history = new String();
+		this.foldResult = new FoldResult();
 		this.random = new MyRandom(seed);
 
 		this.bc = new ArrayList<Classifier>();
@@ -76,9 +68,9 @@ public class EbSsBoost {
 	}
 
 	public void runEbSsBoost() throws Exception {
-
+		System.out.print(" Boost iteration: ");
 		while (this.bc.size() < this.bcSize) {
-
+			System.out.print((bc.size()+1) + " ");
 			this.iterationInfo = new IterationInfo();
 
 			trainClassifiersPool();
@@ -93,11 +85,10 @@ public class EbSsBoost {
 
 			testBcOverLabelledInstances();
 
-			this.result.addIterationInfo(iterationInfo);
-			// test();
+			this.foldResult.addIterationInfo(iterationInfo);
 		}
-		System.out.println(this.result.foldResultSummarytable());
 		testBC();
+		System.out.println();
 	}
 
 	private void initWeights() {
@@ -134,12 +125,9 @@ public class EbSsBoost {
 
 		// Log info
 		this.storeSizes(labelled.size(), unlabelled.size(), this.validationSet.getInstances().size());
+		
 	}
 	
-	/** 
-	 * método precisa ser observado pois o labelled set muda e vai precisar ser
-	 * atualizado a cada iteração.
-	*/
 	private void trainClassifiersPool() throws Exception {
 		for (Classifier c : pool) {
 			c.buildClassifier(this.labelledSet.getInstances());
@@ -200,11 +188,11 @@ public class EbSsBoost {
 	}
 
 	/**
-	 * this methods looks to the current boostSubSet and pins the label defined from
+	 * this methods looks to the current boostSubSet and pins the label defined by the
 	 * pool of classifiers.
 	 * 
-	 * if some instance sampled for current boostSubSet is unlabelled, then this
-	 * same label in test is pinned using class defined from pool.
+	 * In other words, if some instance sampled for current boostSubSet is unlabelled, then this
+	 * same label is pinned in testset instances using the class defined by the pool.
 	 */
 	private void pinLabelsInTestUsingPoolPredictions() {
 		int c = 0;
@@ -297,9 +285,9 @@ public class EbSsBoost {
 	}
 
 	private void storeSizes(int labelledSetSize, int unlabelledSetSize, int validationSetSize) {
-		this.result.setLabelledSetSize(labelledSetSize);
-		this.result.setUnlabelledSetSize(unlabelledSetSize);
-		this.result.setValidationSetSize(validationSetSize);
+		this.foldResult.setLabelledSetSize(labelledSetSize);
+		this.foldResult.setUnlabelledSetSize(unlabelledSetSize);
+		this.foldResult.setValidationSetSize(validationSetSize);
 	}
 
 	private void computeWeightRate() {
@@ -307,8 +295,10 @@ public class EbSsBoost {
 	}
 
 	private void testBC() throws Exception {
+		
 		Prediction pred = new Prediction(this.validationSet);
 		InstanceResult ir;
+		
 		for (Instance i : this.validationSet.getInstances()) {
 			ir = new InstanceResult(i);
 			for (Classifier c : this.bc) {
@@ -319,12 +309,11 @@ public class EbSsBoost {
 		pred.buildMetrics();
 		
 		Measures measures = new Measures(pred);
-		
-		result.setAccuracy(measures.getAccuracy());
-		result.setError(measures.getError());
-		result.setfMeasure(measures.getFmeasureMean());
-		result.setPrecision(measures.getPrecisionMean()); 
-		result.setRecall(measures.getRecallMean());
+		foldResult.setAccuracy(measures.getAccuracy());
+		foldResult.setError(measures.getError());
+		foldResult.setfMeasure(measures.getFmeasureMean());
+		foldResult.setPrecision(measures.getPrecisionMean()); 
+		foldResult.setRecall(measures.getRecallMean());
 		
 	}
 
@@ -424,4 +413,9 @@ public class EbSsBoost {
 		this.agreementValue = (int) agreementValue;
 	}
 
+	public FoldResult getFoldResult() {
+		return foldResult;
+	}
+	
+	
 }

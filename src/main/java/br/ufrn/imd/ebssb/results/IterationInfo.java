@@ -98,12 +98,12 @@ public class IterationInfo {
 	
 	public String onlyValuesToString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(this.labelledInstances + "\t");
-		sb.append(this.unlabelledInstances + "\t");
-		sb.append(this.instancesSampledAndLabelledByPool + "\t");
-		sb.append(this.boostSubSetSize + "\t");
-		sb.append(this.boostEnsembleHits + "\t");
-		sb.append(this.boostEnsembleErrors + "\t");
+		sb.append(this.labelledInstances + "\t\t");
+		sb.append(this.unlabelledInstances + "\t\t");
+		sb.append(this.instancesSampledAndLabelledByPool + "\t\t");
+		sb.append(this.boostSubSetSize + "\t\t");
+		sb.append(this.boostEnsembleHits + "\t\t");
+		sb.append(this.boostEnsembleErrors + "\t\t");
 		return sb.toString();
 	}
 

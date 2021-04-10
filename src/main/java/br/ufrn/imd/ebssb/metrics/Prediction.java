@@ -22,7 +22,7 @@ public class Prediction {
 	}
 
 	public void addPrediction(double actual, double predicted) {
-		NominalPrediction np = new NominalPrediction(actual, NominalPrediction.makeDistribution(predicted, 3));
+		NominalPrediction np = new NominalPrediction(actual, NominalPrediction.makeDistribution(predicted, this.classesMetrics.size()));
 		try {
 			this.matrix.addPrediction(np);
 			this.totalIntances++;

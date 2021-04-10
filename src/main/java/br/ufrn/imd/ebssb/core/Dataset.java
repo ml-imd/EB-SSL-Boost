@@ -159,32 +159,35 @@ public class Dataset {
 	//STATIC METHODS
 
 	public static ArrayList<Dataset> splitDataset(Dataset dataset, int numberOfParts) {
-
+		
 		ArrayList<Dataset> splitedDataset = new ArrayList<Dataset>();
 		ArrayList<Instance> myData = new ArrayList<Instance>();
 		ArrayList<Instance> part = new ArrayList<Instance>();
 
 		int size = dataset.getInstances().size() / numberOfParts;
-
+		
 		for (Instance i : dataset.getInstances()) {
 			myData.add(i);
 		}
+				
 		int i = 0;
 		int control = 0;
 
 		for (i = 0; i < myData.size(); i++) {
 			part.add(myData.get(i));
+			
 			if (part.size() == size) {
 				Dataset d = new Dataset();
 				d.setDatasetName(dataset.getInstances().relationName());
 				d.setInstances(new Instances(dataset.getInstances()));
 				d.getInstances().clear();
-				d.getInstances().addAll(part);
-
+				d.getInstances().addAll(part);			
+				
 				d.matchInstancesAndMyInstances();
 
 				splitedDataset.add(d);
 				part = new ArrayList<Instance>();
+
 				control = i;
 			}
 		}
@@ -198,16 +201,37 @@ public class Dataset {
 				x = 0;
 			}
 		}
+		
 		return splitedDataset;
+		
+		
 	}
 
 	public static Dataset joinDatasets(ArrayList<Dataset> folds) {
-		Instances ins = folds.get(0).getInstances();
-
-		for (int i = 1; i < folds.size(); i++) {
-			ins.addAll(folds.get(i).getInstances());
+		
+		ArrayList<Instance> myData = new ArrayList<Instance>();
+		
+		Dataset d = new Dataset();
+		d.setDatasetName(folds.get(0).getInstances().relationName());
+		d.setInstances(new Instances(folds.get(0).getInstances()));
+		d.getInstances().clear();
+				
+		for (Dataset dd : folds) {
+			for(Instance i: dd.getInstances()) {
+				myData.add(i);	
+			}
 		}
-		return new Dataset(ins);
+		
+		d.getInstances().addAll(myData);			
+		
+		return d;
+		
+		/*
+		 * Instances ins = folds.get(0).getInstances();
+		 * 
+		 * for (int i = 1; i < folds.size(); i++) {
+		 * ins.addAll(folds.get(i).getInstances()); } return new Dataset(ins);
+		 */
 	}
 
 	
