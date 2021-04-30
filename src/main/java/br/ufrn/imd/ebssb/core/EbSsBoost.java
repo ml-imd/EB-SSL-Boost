@@ -268,6 +268,7 @@ public class EbSsBoost {
 				}
 				// else, the bc predicted correctly and weight of the instance is decreased
 				else {
+					this.testSet.decreaseTotalWeight(this.weightRate);
 					bcHit++;
 				}
 			}
