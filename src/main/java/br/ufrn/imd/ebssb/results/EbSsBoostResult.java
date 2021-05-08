@@ -9,7 +9,7 @@ public class EbSsBoostResult {
 
 	private int numFolds;
 	private String datasetName;
-	private String selfTrainingVersion;
+	private String version;
 	private ArrayList<FoldResult> results;
 	private FoldResult averageResult;
 	private long begin;
@@ -18,7 +18,7 @@ public class EbSsBoostResult {
 	public EbSsBoostResult(int numFolds, String datasetName, String EbSsBoostVersion) {
 		this.numFolds = numFolds;
 		this.datasetName = new String(datasetName);
-		this.selfTrainingVersion = new String(EbSsBoostVersion);
+		this.version = new String(EbSsBoostVersion);
 		this.results = new ArrayList<FoldResult>();
 		this.averageResult = new FoldResult();
 	}
@@ -74,7 +74,7 @@ public class EbSsBoostResult {
 		sb.append("\n");
 		sb.append("@DATASET: " + datasetName + "\n");
 		sb.append("@Folds  : " + numFolds + "\n");
-		sb.append("@STvers : " + selfTrainingVersion + "\n");
+		sb.append("@STvers : " + version + "\n");
 		sb.append("------------------------------------------------------------------------------------------------");
 		sb.append("\n\t\t");
 		sb.append(" accura " + "\t");
@@ -145,12 +145,12 @@ public class EbSsBoostResult {
 		this.datasetName = datasetName;
 	}
 
-	public String getSelfTrainingVersion() {
-		return selfTrainingVersion;
+	public String getVersion() {
+		return version;
 	}
 
-	public void setSelfTrainingVersion(String selfTrainingVersion) {
-		this.selfTrainingVersion = selfTrainingVersion;
+	public void setVersion(String version) {
+		this.version = version;
 	}
 
 	public ArrayList<FoldResult> getResults() {
