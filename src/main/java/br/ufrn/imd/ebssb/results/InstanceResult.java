@@ -2,6 +2,9 @@ package br.ufrn.imd.ebssb.results;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import weka.core.Instance;
@@ -15,6 +18,8 @@ public class InstanceResult{
 	private Integer bestAgreement;
 	private Double factor;
 	
+	private Map<Integer,Double> classToWeight;
+	
 	public InstanceResult() {
 		
 	}
@@ -26,16 +31,32 @@ public class InstanceResult{
 		this.bestClass = -1.0;
 		this.bestAgreement = 0;
 		this.factor = 0.0;
+		classToWeight = new HashMap<Integer,Double>();
 	}
 
-	public void addPrediction(Double prediction) {
+	public void addPrediction(Double prediction, double weight) {
 		this.predictions.add(prediction);
 		Integer count = agreementsPerClass.containsKey(prediction) ? agreementsPerClass.get(prediction) : 0;
 		agreementsPerClass.put(prediction, count + 1);
 
 		if (agreementsPerClass.get(prediction) >= bestAgreement) {
 			this.bestAgreement = agreementsPerClass.get(prediction);
-			this.bestClass = prediction;
+			//this.bestClass = prediction;
+		}
+		
+		int output = prediction.intValue();
+		if(!classToWeight.containsKey(output)) {
+			classToWeight.put(output, weight);
+		} else {
+			double w = classToWeight.get(output);
+			classToWeight.put(output, w + weight);
+		}
+		double maxWeight = -1;
+		for(Entry<Integer,Double> entry : classToWeight.entrySet()) {
+			if(entry.getValue() > maxWeight) {
+				maxWeight = entry.getValue();
+				bestClass = (double) entry.getKey();
+			}
 		}
 	}
 

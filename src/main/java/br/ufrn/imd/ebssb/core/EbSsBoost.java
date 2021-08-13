@@ -27,7 +27,7 @@ public class EbSsBoost {
 	private Dataset boostSubSet;
 	private Dataset tempSet;
 
-	private ArrayList<Classifier> bc; // boost committee
+	private ArrayList<ClassifierWithInfo> bc; // boost committee
 	private int bcSize = 10;
 
 	private ArrayList<Classifier> pool;
@@ -50,7 +50,7 @@ public class EbSsBoost {
 		this.foldResult = new FoldResult();
 		this.random = new MyRandom(seed);
 
-		this.bc = new ArrayList<Classifier>();
+		this.bc = new ArrayList<ClassifierWithInfo>();
 
 		this.validationSet = new Dataset(validationSet);
 		this.testSet = new Dataset(testSet);
@@ -144,7 +144,7 @@ public class EbSsBoost {
 				result = new InstanceResult(m.getInstance());
 
 				for (Classifier c : this.pool) {
-					result.addPrediction(c.classifyInstance(m.getInstance()));
+					result.addPrediction(c.classifyInstance(m.getInstance()), 1.0);
 				}
 				m.setResult(result);
 			}
@@ -219,11 +219,30 @@ public class EbSsBoost {
 		try {
 			j48.setOptions(weka.core.Utils.splitOptions("-C 0.05 -M 2"));
 			j48.buildClassifier(this.boostSubSet.getInstances());
+				
+			double sumWeights = 0;
+			double totalWeights = 0;
+			for(MyInstance minstance : boostSubSet.getMyInstances()) {
+				if (minstance.getInstanceClass() != -1) {
+					double output = j48.classifyInstance(minstance.getInstance());
+					double weight = minstance.getWeight();
+					totalWeights += weight;
+					if(minstance.getInstanceClass() != output) {
+						sumWeights += weight;
+					}
+				}
+			}
+			double correction = 0.00001;
+			double err = (sumWeights + correction) / (totalWeights + correction);
+			int numClasses = boostSubSet.getInstances().numClasses();
+			double alpha = Math.log((1.0 - err)/err) + Math.log(numClasses - 1);
+			ClassifierWithInfo classifier = new ClassifierWithInfo(j48);
+			classifier.setWeight(alpha);
+			this.bc.add(classifier);
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		this.bc.add(j48);
 	}
 
 	private void renewlabelledAndUnlabelldSets() {
@@ -254,8 +273,9 @@ public class EbSsBoost {
 				result = new InstanceResult(m.getInstance());
 
 				// test it with the bc
-				for (Classifier c : this.bc) {
-					result.addPrediction(c.classifyInstance(m.getInstance()));
+				for (ClassifierWithInfo info : this.bc) {
+					Classifier c = info.getClassifier();
+					result.addPrediction(c.classifyInstance(m.getInstance()), info.getWeight());
 				}
 				m.setBoostEnsembleResult(result);
 
@@ -302,8 +322,9 @@ public class EbSsBoost {
 		
 		for (Instance i : this.validationSet.getInstances()) {
 			ir = new InstanceResult(i);
-			for (Classifier c : this.bc) {
-				ir.addPrediction(c.classifyInstance(i));
+			for (ClassifierWithInfo info : this.bc) {
+				Classifier c = info.getClassifier();
+				ir.addPrediction(c.classifyInstance(i), info.getWeight());
 			}
 			pred.addPrediction(i.classValue(), ir.getBestClass());
 		}

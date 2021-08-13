@@ -102,8 +102,8 @@ public class EbSsBoostExecutor {
 		String basePath = new String("src/main/resources/datasets/experiment_test/");
 
 		ArrayList<String> sources = new ArrayList<String>();
-		//sources.add("Iris.arff");
-		sources.add("Abalone.arff");
+		sources.add("Iris.arff");
+		//sources.add("Abalone.arff");
 
 		for (String s : sources) {
 			Dataset d;
