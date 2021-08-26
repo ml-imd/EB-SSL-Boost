@@ -149,7 +149,6 @@ public class EbSsBoost {
 
 				for (Classifier c : this.pool) {
 					result.addPrediction(c.classifyInstance(m.getInstance()));
-					//result.addPredictionWithWeight(c.classifyInstance(m.getInstance()), 1.0);
 				}
 				m.setResult(result);
 			}
@@ -269,6 +268,7 @@ public class EbSsBoost {
 	
 	private void updateIntancesWeight() throws Exception {
 		Iterator<MyInstance> iterator = this.testSet.getMyInstances().iterator();
+		//Version considering only the last classifier from bc
 		ClassifierWithInfo classifier = bc.get(bc.size() - 1);
 		
 		while (iterator.hasNext()) {
@@ -286,16 +286,15 @@ public class EbSsBoost {
 		}
 	}
 	
+	// Instance weight update - Cephas
 	private void updateInstanceWeightAccordingToPredictedClass(MyInstance m, Double predictedClass) {
 		if (predictedClass != m.getInstanceClass().doubleValue()) {
 			m.increaseWeight(this.weightRate);
 			this.testSet.increaseTotalWeight(this.weightRate);
 		}
-		else {
-			this.testSet.decreaseTotalWeight(this.weightRate);
-		}
 	}
 	
+	// Instance weight update - algorithm
 	private void updateInstanceWeightAccordingToPredictedClassAndAlpha(MyInstance m, Double predictedClass, Double alpha) {
 		Double newWeight = m.getWeight();
 		
@@ -305,13 +304,6 @@ public class EbSsBoost {
 			
 			m.setWeight(newWeight);
 			this.testSet.increaseTotalWeight(increase);
-		}
-		else {
-			newWeight *= Math.exp(-alpha);
-			Double decrease = m.getWeight() - newWeight;
-			
-			m.setWeight(newWeight);
-			this.testSet.decreaseTotalWeight(decrease);
 		}
 	}
 
