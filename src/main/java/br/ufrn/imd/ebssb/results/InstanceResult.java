@@ -34,14 +34,13 @@ public class InstanceResult{
 		classToWeight = new HashMap<Integer,Double>();
 	}
 
-	public void addPrediction(Double prediction, double weight) {
+	public void addPredictionWithWeight(Double prediction, double weight) {
 		this.predictions.add(prediction);
 		Integer count = agreementsPerClass.containsKey(prediction) ? agreementsPerClass.get(prediction) : 0;
 		agreementsPerClass.put(prediction, count + 1);
 
 		if (agreementsPerClass.get(prediction) >= bestAgreement) {
 			this.bestAgreement = agreementsPerClass.get(prediction);
-			//this.bestClass = prediction;
 		}
 		
 		int output = prediction.intValue();
@@ -57,6 +56,17 @@ public class InstanceResult{
 				maxWeight = entry.getValue();
 				bestClass = (double) entry.getKey();
 			}
+		}
+	}
+	
+	public void addPrediction(Double prediction) {
+		this.predictions.add(prediction);
+		Integer count = agreementsPerClass.containsKey(prediction) ? agreementsPerClass.get(prediction) : 0;
+		agreementsPerClass.put(prediction, count + 1);
+
+		if (agreementsPerClass.get(prediction) >= bestAgreement) {
+			this.bestAgreement = agreementsPerClass.get(prediction);
+			this.bestClass = prediction;
 		}
 	}
 

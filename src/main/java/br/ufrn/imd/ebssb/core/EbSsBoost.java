@@ -44,6 +44,8 @@ public class EbSsBoost {
 
 	private FoldResult foldResult;
 	private IterationInfo iterationInfo;
+	
+	private boolean usingClassifierWeight = true;
 
 	public EbSsBoost(Dataset testSet, Dataset validationSet, int seed) {
 
@@ -82,6 +84,8 @@ public class EbSsBoost {
 
 			trainBoostClassifierWithBcSubSet();
 			renewlabelledAndUnlabelldSets();
+			
+			updateIntancesWeight();
 
 			testBcOverLabelledInstances();
 
@@ -144,7 +148,8 @@ public class EbSsBoost {
 				result = new InstanceResult(m.getInstance());
 
 				for (Classifier c : this.pool) {
-					result.addPrediction(c.classifyInstance(m.getInstance()), 1.0);
+					result.addPrediction(c.classifyInstance(m.getInstance()));
+					//result.addPredictionWithWeight(c.classifyInstance(m.getInstance()), 1.0);
 				}
 				m.setResult(result);
 			}
@@ -219,25 +224,32 @@ public class EbSsBoost {
 		try {
 			j48.setOptions(weka.core.Utils.splitOptions("-C 0.05 -M 2"));
 			j48.buildClassifier(this.boostSubSet.getInstances());
+			
+			ClassifierWithInfo classifier = new ClassifierWithInfo(j48);
+			
+			if(usingClassifierWeight) {
+				double sumWeights = 0;
+				double totalWeights = 0;
 				
-			double sumWeights = 0;
-			double totalWeights = 0;
-			for(MyInstance minstance : boostSubSet.getMyInstances()) {
-				if (minstance.getInstanceClass() != -1) {
-					double output = j48.classifyInstance(minstance.getInstance());
-					double weight = minstance.getWeight();
-					totalWeights += weight;
-					if(minstance.getInstanceClass() != output) {
-						sumWeights += weight;
+				for(MyInstance minstance : boostSubSet.getMyInstances()) {
+					if (minstance.getInstanceClass() != -1) {
+						double output = j48.classifyInstance(minstance.getInstance());
+						double weight = minstance.getWeight();
+						totalWeights += weight;
+						if(minstance.getInstanceClass() != output) {
+							sumWeights += weight;
+						}
 					}
 				}
-			}
-			double correction = 0.00001;
-			double err = (sumWeights + correction) / (totalWeights + correction);
-			int numClasses = boostSubSet.getInstances().numClasses();
-			double alpha = Math.log((1.0 - err)/err) + Math.log(numClasses - 1);
-			ClassifierWithInfo classifier = new ClassifierWithInfo(j48);
-			classifier.setWeight(alpha);
+				
+				double correction = 0.00001;
+				double err = (sumWeights + correction) / (totalWeights + correction);
+				int numClasses = boostSubSet.getInstances().numClasses();
+				double alpha = Math.log((1.0 - err)/err) + Math.log(numClasses - 1);
+				
+				classifier.setWeight(alpha);
+			}	
+				
 			this.bc.add(classifier);
 			
 		} catch (Exception e) {
@@ -252,6 +264,54 @@ public class EbSsBoost {
 			if (m.getInstanceClass() != -1) {
 				this.labelledSet.addMyInstance(m);
 			}
+		}
+	}
+	
+	private void updateIntancesWeight() throws Exception {
+		Iterator<MyInstance> iterator = this.testSet.getMyInstances().iterator();
+		ClassifierWithInfo classifier = bc.get(bc.size() - 1);
+		
+		while (iterator.hasNext()) {
+			MyInstance m = iterator.next();
+
+			if (m.getInstanceClass() != -1) {
+				Double predictedClass = classifier.getClassifier().classifyInstance(m.getInstance());
+				
+				if(usingClassifierWeight) {
+					updateInstanceWeightAccordingToPredictedClassAndAlpha(m, predictedClass, classifier.getWeight());
+				} else {
+					updateInstanceWeightAccordingToPredictedClass(m, predictedClass);
+				}
+			}
+		}
+	}
+	
+	private void updateInstanceWeightAccordingToPredictedClass(MyInstance m, Double predictedClass) {
+		if (predictedClass != m.getInstanceClass().doubleValue()) {
+			m.increaseWeight(this.weightRate);
+			this.testSet.increaseTotalWeight(this.weightRate);
+		}
+		else {
+			this.testSet.decreaseTotalWeight(this.weightRate);
+		}
+	}
+	
+	private void updateInstanceWeightAccordingToPredictedClassAndAlpha(MyInstance m, Double predictedClass, Double alpha) {
+		Double newWeight = m.getWeight();
+		
+		if (predictedClass != m.getInstanceClass().doubleValue()) {
+			newWeight *= Math.exp(alpha);
+			Double increase = newWeight - m.getWeight();
+			
+			m.setWeight(newWeight);
+			this.testSet.increaseTotalWeight(increase);
+		}
+		else {
+			newWeight *= Math.exp(-alpha);
+			Double decrease = m.getWeight() - newWeight;
+			
+			m.setWeight(newWeight);
+			this.testSet.decreaseTotalWeight(decrease);
 		}
 	}
 
@@ -275,20 +335,21 @@ public class EbSsBoost {
 				// test it with the bc
 				for (ClassifierWithInfo info : this.bc) {
 					Classifier c = info.getClassifier();
-					result.addPrediction(c.classifyInstance(m.getInstance()), info.getWeight());
+					if(usingClassifierWeight) {
+						result.addPredictionWithWeight(c.classifyInstance(m.getInstance()), info.getWeight());
+					} else {
+						result.addPrediction(c.classifyInstance(m.getInstance()));
+					}
 				}
 				m.setBoostEnsembleResult(result);
 
 				// if the bc prediction is different of pinned label -> bc wrong and the weight
 				// is augmented
 				if (m.getBoostEnsembleResult().getBestClass().doubleValue() != m.getInstanceClass().doubleValue()) {
-					m.increaseWeight(this.weightRate);
-					this.testSet.increaseTotalWeight(this.weightRate);
 					bcWrong++;
 				}
 				// else, the bc predicted correctly and weight of the instance is decreased
 				else {
-					this.testSet.decreaseTotalWeight(this.weightRate);
 					bcHit++;
 				}
 			}
@@ -324,7 +385,11 @@ public class EbSsBoost {
 			ir = new InstanceResult(i);
 			for (ClassifierWithInfo info : this.bc) {
 				Classifier c = info.getClassifier();
-				ir.addPrediction(c.classifyInstance(i), info.getWeight());
+				if(usingClassifierWeight){
+					ir.addPredictionWithWeight(c.classifyInstance(i), info.getWeight());
+				} else {
+					ir.addPrediction(c.classifyInstance(i));
+				}
 			}
 			pred.addPrediction(i.classValue(), ir.getBestClass());
 		}
