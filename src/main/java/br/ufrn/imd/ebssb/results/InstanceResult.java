@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import weka.core.Instance;
@@ -14,6 +13,7 @@ public class InstanceResult{
 	private Instance instance;
 	private ArrayList<Double> predictions;
 	private TreeMap<Double, Integer> agreementsPerClass;
+	private Double bestWeight;
 	private Double bestClass;
 	private Integer bestAgreement;
 	private Double factor;
@@ -30,18 +30,13 @@ public class InstanceResult{
 		this.agreementsPerClass = new TreeMap<Double, Integer>();
 		this.bestClass = -1.0;
 		this.bestAgreement = 0;
+		this.bestWeight = 0.0;
 		this.factor = 0.0;
 		classToWeight = new HashMap<Integer,Double>();
 	}
 
 	public void addPredictionWithWeight(Double prediction, double weight) {
 		this.predictions.add(prediction);
-		Integer count = agreementsPerClass.containsKey(prediction) ? agreementsPerClass.get(prediction) : 0;
-		agreementsPerClass.put(prediction, count + 1);
-
-		if (agreementsPerClass.get(prediction) >= bestAgreement) {
-			this.bestAgreement = agreementsPerClass.get(prediction);
-		}
 		
 		int output = prediction.intValue();
 		if(!classToWeight.containsKey(output)) {
@@ -50,12 +45,10 @@ public class InstanceResult{
 			double w = classToWeight.get(output);
 			classToWeight.put(output, w + weight);
 		}
-		double maxWeight = -1;
-		for(Entry<Integer,Double> entry : classToWeight.entrySet()) {
-			if(entry.getValue() > maxWeight) {
-				maxWeight = entry.getValue();
-				bestClass = (double) entry.getKey();
-			}
+		
+		if (classToWeight.get(output) >= bestWeight) {
+			this.bestWeight = classToWeight.get(output);
+			this.bestClass = prediction;
 		}
 	}
 	
