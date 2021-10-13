@@ -17,8 +17,8 @@ public class EbSsBoostExecutor {
 
 	public static EbSsBoostResult ebSsBoostResult;
 
-	public static String ebSsBoostVersionOne = "EbSsB_V_01";
-	public static String ebSsBoostVersionTwo = "EbSsB_V_02";
+	public static String ebSsBoostVersionOne = "EbSsB_V_01"; // Version with linear update of weights made by Cephas
+	public static String ebSsBoostVersionTwo = "EbSsB_V_02"; // Version with update of weights adapted from Multi-class AdaBoost
 
 	public static EbSsBoostOutputWriter ebssbowSummary;
 	public static String outputSummaryResultBasePath = "src/main/resources/results/summary/";
@@ -35,7 +35,7 @@ public class EbSsBoostExecutor {
 		populateDatasetsTest();
 
 		for (Dataset d : datasets) {
-			run(d, ebSsBoostVersionOne);
+			run(d, ebSsBoostVersionTwo);
 		}
 	}
 

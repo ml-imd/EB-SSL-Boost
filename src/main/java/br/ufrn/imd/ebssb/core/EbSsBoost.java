@@ -229,7 +229,7 @@ public class EbSsBoost {
 			
 			ClassifierWithInfo classifier = new ClassifierWithInfo(j48);
 			
-			if(version.equals(ebSsBoostVersionOne)) {
+			if(version.equals(ebSsBoostVersionTwo)) {
 				double sumWeights = 0;
 				double totalWeights = 0;
 				
@@ -246,8 +246,7 @@ public class EbSsBoost {
 				
 				double correction = 0.00001;
 				double err = (sumWeights + correction) / (totalWeights + correction);
-				int numClasses = boostSubSet.getInstances().numClasses();
-				double alpha = Math.log((1.0 - err)/err) + Math.log(numClasses - 1);
+				double alpha = 1 - err;
 				
 				classifier.setWeight(alpha);
 			}	
@@ -281,9 +280,9 @@ public class EbSsBoost {
 				Double predictedClass = classifier.getClassifier().classifyInstance(m.getInstance());
 				
 				if(version.equals(ebSsBoostVersionOne)) {
-					updateInstanceWeightAccordingToPredictedClassAndAlpha(m, predictedClass, classifier.getWeight());
-				} else if(version.equals(ebSsBoostVersionTwo)){
 					updateInstanceWeightAccordingToPredictedClass(m, predictedClass);
+				} else if(version.equals(ebSsBoostVersionTwo)){
+					updateInstanceWeightAccordingToPredictedClassAndAlpha(m, predictedClass, classifier.getWeight());
 				}
 			}
 		}
@@ -331,9 +330,9 @@ public class EbSsBoost {
 				for (ClassifierWithInfo info : this.bc) {
 					Classifier c = info.getClassifier();
 					if(version.equals(ebSsBoostVersionOne)) {
-						result.addPredictionWithWeight(c.classifyInstance(m.getInstance()), info.getWeight());
-					} else if(version.equals(ebSsBoostVersionTwo)){
 						result.addPrediction(c.classifyInstance(m.getInstance()));
+					} else if(version.equals(ebSsBoostVersionTwo)){
+						result.addPredictionWithWeight(c.classifyInstance(m.getInstance()), info.getWeight());
 					}
 				}
 				m.setBoostEnsembleResult(result);
@@ -381,9 +380,9 @@ public class EbSsBoost {
 			for (ClassifierWithInfo info : this.bc) {
 				Classifier c = info.getClassifier();
 				if(version.equals(ebSsBoostVersionOne)){
-					ir.addPredictionWithWeight(c.classifyInstance(i), info.getWeight());
-				} else if(version.equals(ebSsBoostVersionTwo)){
 					ir.addPrediction(c.classifyInstance(i));
+				} else if(version.equals(ebSsBoostVersionTwo)){
+					ir.addPredictionWithWeight(c.classifyInstance(i), info.getWeight());
 				}
 			}
 			pred.addPrediction(i.classValue(), ir.getBestClass());
