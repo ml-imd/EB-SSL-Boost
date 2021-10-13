@@ -18,6 +18,7 @@ public class EbSsBoostExecutor {
 	public static EbSsBoostResult ebSsBoostResult;
 
 	public static String ebSsBoostVersionOne = "EbSsB_V_01";
+	public static String ebSsBoostVersionTwo = "EbSsB_V_02";
 
 	public static EbSsBoostOutputWriter ebssbowSummary;
 	public static String outputSummaryResultBasePath = "src/main/resources/results/summary/";
@@ -76,6 +77,8 @@ public class EbSsBoostExecutor {
 
 			System.out.print("\t fold: " + (i+1) + " ");
 			EbSsBoost ebSsBoost = new EbSsBoost(ddd, validation, seed);
+
+			ebSsBoost.setVersion(ebSsBoostVersion);
 			ebSsBoost.runEbSsBoost();
 
 			ebSsBoostResult.setEnd(System.currentTimeMillis());
@@ -83,7 +86,7 @@ public class EbSsBoostExecutor {
 
 			ebssbowDetailed.logDetailsAboutStep(dataset.getDatasetName(), i + 1);
 			ebssbowDetailed.addContentLine(ebSsBoost.getFoldResult().foldResultSummarytable());
-			// ebssbowDetailed.addContent(ebSsBoost.getFoldResult().getIterationsDatasetHistory());
+			ebssbowDetailed.addContent(ebSsBoost.getFoldResult().getIterationsDatasetHistory());
 
 		}
 		ebssbowDetailed.writeInFile();

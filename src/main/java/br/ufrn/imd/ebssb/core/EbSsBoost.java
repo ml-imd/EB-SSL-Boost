@@ -18,6 +18,9 @@ import weka.core.Instance;
 import weka.core.Instances;
 
 public class EbSsBoost {
+	
+	public static String ebSsBoostVersionOne = "EbSsB_V_01";
+	public static String ebSsBoostVersionTwo = "EbSsB_V_02";
 
 	private Dataset validationSet;
 	private Dataset testSet;
@@ -45,7 +48,7 @@ public class EbSsBoost {
 	private FoldResult foldResult;
 	private IterationInfo iterationInfo;
 	
-	private boolean usingClassifierWeight = true;
+	private String version;
 
 	public EbSsBoost(Dataset testSet, Dataset validationSet, int seed) {
 
@@ -226,7 +229,7 @@ public class EbSsBoost {
 			
 			ClassifierWithInfo classifier = new ClassifierWithInfo(j48);
 			
-			if(usingClassifierWeight) {
+			if(version.equals(ebSsBoostVersionOne)) {
 				double sumWeights = 0;
 				double totalWeights = 0;
 				
@@ -277,9 +280,9 @@ public class EbSsBoost {
 			if (m.getInstanceClass() != -1) {
 				Double predictedClass = classifier.getClassifier().classifyInstance(m.getInstance());
 				
-				if(usingClassifierWeight) {
+				if(version.equals(ebSsBoostVersionOne)) {
 					updateInstanceWeightAccordingToPredictedClassAndAlpha(m, predictedClass, classifier.getWeight());
-				} else {
+				} else if(version.equals(ebSsBoostVersionTwo)){
 					updateInstanceWeightAccordingToPredictedClass(m, predictedClass);
 				}
 			}
@@ -327,9 +330,9 @@ public class EbSsBoost {
 				// test it with the bc
 				for (ClassifierWithInfo info : this.bc) {
 					Classifier c = info.getClassifier();
-					if(usingClassifierWeight) {
+					if(version.equals(ebSsBoostVersionOne)) {
 						result.addPredictionWithWeight(c.classifyInstance(m.getInstance()), info.getWeight());
-					} else {
+					} else if(version.equals(ebSsBoostVersionTwo)){
 						result.addPrediction(c.classifyInstance(m.getInstance()));
 					}
 				}
@@ -377,9 +380,9 @@ public class EbSsBoost {
 			ir = new InstanceResult(i);
 			for (ClassifierWithInfo info : this.bc) {
 				Classifier c = info.getClassifier();
-				if(usingClassifierWeight){
+				if(version.equals(ebSsBoostVersionOne)){
 					ir.addPredictionWithWeight(c.classifyInstance(i), info.getWeight());
-				} else {
+				} else if(version.equals(ebSsBoostVersionTwo)){
 					ir.addPrediction(c.classifyInstance(i));
 				}
 			}
@@ -494,6 +497,14 @@ public class EbSsBoost {
 
 	public FoldResult getFoldResult() {
 		return foldResult;
+	}
+
+	public String getVersion() {
+		return version;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
 	}
 	
 	
