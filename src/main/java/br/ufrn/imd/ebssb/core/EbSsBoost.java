@@ -246,7 +246,7 @@ public class EbSsBoost {
 				
 				double correction = 0.00001;
 				double err = (sumWeights + correction) / (totalWeights + correction);
-				double alpha = 1 - err;
+				double alpha = err;
 				
 				classifier.setWeight(alpha);
 			}	
