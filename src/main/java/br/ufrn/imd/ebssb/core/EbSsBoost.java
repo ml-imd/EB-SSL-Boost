@@ -21,6 +21,7 @@ public class EbSsBoost {
 	
 	public static String ebSsBoostVersionOne = "EbSsB_V_01";
 	public static String ebSsBoostVersionTwo = "EbSsB_V_02";
+	public static String ebSsBoostVersionThree = "EbSsB_V_03";
 
 	private Dataset validationSet;
 	private Dataset testSet;
@@ -34,13 +35,13 @@ public class EbSsBoost {
 	private int bcSize = 10;
 
 	private ArrayList<Classifier> pool;
-	private double agreementThreshold = 75; // agreement percent
+	private double agreementThreshold = 70; // agreement percent
 	private int agreementValue; // number of votes - target
 
 	private Double initialWeight = 1.0;
 	private Double weightRate;
 
-	private int boostSubsetPercent = 20;
+	private int boostSubsetPercent = 100;
 	private int boostSubsetAmount;
 
 	private MyRandom random;
@@ -72,7 +73,13 @@ public class EbSsBoost {
 		initWeights();
 	}
 
-	public void runEbSsBoost() throws Exception {
+	/**
+	 * This version doesn't use weights for boosting classifiers and the increase of instance weights is linear. 
+	 * At each error in instance, it's error is increased by 1
+	 * 
+	 * @throws Exception
+	 */
+	public void runVersionOne() throws Exception {
 		System.out.print(" Boost iteration: ");
 		while (this.bc.size() < this.bcSize) {
 			System.out.print((bc.size()+1) + " ");
@@ -98,6 +105,72 @@ public class EbSsBoost {
 		System.out.println();
 	}
 
+	/**
+	 * This version uses the AdaBoost rule for instance weights update.
+	 * obs.: problems about using this rule in SSL context - terrible results due to huge increase.
+	 * 
+	 * @throws Exception
+	 */
+	
+	public void runVersionTwo() throws Exception {
+		System.out.print(" Boost iteration: ");
+		while (this.bc.size() < this.bcSize) {
+			System.out.print((bc.size()+1) + " ");
+			this.iterationInfo = new IterationInfo();
+
+			trainClassifiersPool();
+			classifyUnlabelledByPool();
+
+			sampleDataForBoostClassifier();
+
+			pinLabelsInTestUsingPoolPredictions();
+
+			trainBoostClassifierWithBcSubSet();
+			renewlabelledAndUnlabelldSets();
+			
+			updateIntancesWeight();
+
+			testBcOverLabelledInstances();
+
+			this.foldResult.addIterationInfo(iterationInfo);
+		}
+		testBC();
+		System.out.println();
+	}
+	
+	/**
+	 * This version uses a novel rule to update instance weights. This rule is based on BC classifier error and
+	 * increases the wrong classified instances using the formula: w = 1 + w * error, where "w" is the instance
+	 * weight.
+	 * 
+	 * @throws Exception
+	 */
+	public void runVersionThree() throws Exception {
+		System.out.print(" Boost iteration: ");
+		while (this.bc.size() < this.bcSize) {
+			System.out.print((bc.size()+1) + " ");
+			this.iterationInfo = new IterationInfo();
+
+			trainClassifiersPool();
+			classifyUnlabelledByPool();
+
+			sampleDataForBoostClassifier();
+
+			pinLabelsInTestUsingPoolPredictions();
+
+			trainBoostClassifierWithBcSubSet();
+			renewlabelledAndUnlabelldSets();
+			
+			updateIntancesWeight();
+
+			testBcOverLabelledInstances();
+
+			this.foldResult.addIterationInfo(iterationInfo);
+		}
+		testBC();
+		System.out.println();
+	}
+		
 	private void initWeights() {
 		this.testSet.initInstancesWeight(initialWeight);
 	}
@@ -195,7 +268,7 @@ public class EbSsBoost {
 	}
 
 	/**
-	 * this methods looks to the current boostSubSet and pins the label defined by the
+	 * this method looks to the current boostSubSet and pins the label defined by the
 	 * pool of classifiers.
 	 * 
 	 * In other words, if some instance sampled for current boostSubSet is unlabelled, then this
@@ -229,10 +302,10 @@ public class EbSsBoost {
 			
 			ClassifierWithInfo classifier = new ClassifierWithInfo(j48);
 			
-			if(version.equals(ebSsBoostVersionTwo)) {
+		
 				double sumWeights = 0;
 				double totalWeights = 0;
-				
+				int errou = 0;
 				for(MyInstance minstance : boostSubSet.getMyInstances()) {
 					if (minstance.getInstanceClass() != -1) {
 						double output = j48.classifyInstance(minstance.getInstance());
@@ -240,6 +313,7 @@ public class EbSsBoost {
 						totalWeights += weight;
 						if(minstance.getInstanceClass() != output) {
 							sumWeights += weight;
+							errou++;
 						}
 					}
 				}
@@ -249,7 +323,9 @@ public class EbSsBoost {
 				double alpha = err;
 				
 				classifier.setWeight(alpha);
-			}	
+				System.out.println("Erro do classificador: " + alpha);
+				System.out.println("Tamanho do subset: " + boostSubSet.getInstances().size());
+				System.out.println("Classificador errou: " + errou);
 				
 			this.bc.add(classifier);
 			
@@ -281,8 +357,12 @@ public class EbSsBoost {
 				
 				if(version.equals(ebSsBoostVersionOne)) {
 					updateInstanceWeightAccordingToPredictedClass(m, predictedClass);
-				} else if(version.equals(ebSsBoostVersionTwo)){
+				} 
+				else if(version.equals(ebSsBoostVersionTwo)){
 					updateInstanceWeightAccordingToPredictedClassAndAlpha(m, predictedClass, classifier.getWeight());
+				}
+				 else if(version.equals(ebSsBoostVersionThree)){
+					updateInstanceWeightAccordingToPredictedClassAndAlphaNew(m, predictedClass, classifier.getWeight());
 				}
 			}
 		}
@@ -302,6 +382,19 @@ public class EbSsBoost {
 		
 		if (predictedClass != m.getInstanceClass().doubleValue()) {
 			newWeight *= Math.exp(alpha);
+			Double increase = newWeight - m.getWeight();
+			
+			m.setWeight(newWeight);
+			this.testSet.increaseTotalWeight(increase);
+		}
+	}
+	
+	// Instance weight update - algorithm - regra sugerida - JCX
+	private void updateInstanceWeightAccordingToPredictedClassAndAlphaNew(MyInstance m, Double predictedClass, Double alpha) {
+		Double newWeight = m.getWeight();
+		
+		if (predictedClass != m.getInstanceClass().doubleValue()) {
+			newWeight += 1 + (newWeight * alpha);
 			Double increase = newWeight - m.getWeight();
 			
 			m.setWeight(newWeight);
@@ -381,8 +474,12 @@ public class EbSsBoost {
 				Classifier c = info.getClassifier();
 				if(version.equals(ebSsBoostVersionOne)){
 					ir.addPrediction(c.classifyInstance(i));
-				} else if(version.equals(ebSsBoostVersionTwo)){
+				} 
+				else if(version.equals(ebSsBoostVersionTwo)){
 					ir.addPredictionWithWeight(c.classifyInstance(i), info.getWeight());
+				} 
+				else if(version.equals(ebSsBoostVersionThree)){
+					ir.addPrediction(c.classifyInstance(i));
 				}
 			}
 			pred.addPrediction(i.classValue(), ir.getBestClass());

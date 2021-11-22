@@ -19,7 +19,8 @@ public class EbSsBoostExecutor {
 
 	public static String ebSsBoostVersionOne = "EbSsB_V_01"; // Version with linear update of weights made by Cephas
 	public static String ebSsBoostVersionTwo = "EbSsB_V_02"; // Version with update of weights adapted from Multi-class AdaBoost
-
+	public static String ebSsBoostVersionThree = "EbSsB_V_03";
+	
 	public static EbSsBoostOutputWriter ebssbowSummary;
 	public static String outputSummaryResultBasePath = "src/main/resources/results/summary/";
 
@@ -35,13 +36,13 @@ public class EbSsBoostExecutor {
 		populateDatasetsTest();
 
 		for (Dataset d : datasets) {
-			run(d, ebSsBoostVersionTwo);
+			run(d, ebSsBoostVersionThree);
 		}
 	}
 
 	public static void run(Dataset dataset, String ebSsBoostVersion) throws Exception {
 
-		System.out.println("Init EbSsBoost over " + dataset.getDatasetName() + " dataset");
+		//System.out.println("Init EbSsBoost over " + dataset.getDatasetName() + " dataset");
 		
 		ebSsBoostResult = new EbSsBoostResult(numFolds, dataset.getDatasetName(), ebSsBoostVersion);
 
@@ -75,11 +76,11 @@ public class EbSsBoostExecutor {
 
 			Dataset ddd = Dataset.joinDatasets(foldsForTest);
 
-			System.out.print("\t fold: " + (i+1) + " ");
+			System.out.print("fold: " + (i+1) + " ");
 			EbSsBoost ebSsBoost = new EbSsBoost(ddd, validation, seed);
 
 			ebSsBoost.setVersion(ebSsBoostVersion);
-			ebSsBoost.runEbSsBoost();
+			ebSsBoost.runVersionThree();
 
 			ebSsBoostResult.setEnd(System.currentTimeMillis());
 			ebSsBoostResult.addFoldResult(ebSsBoost.getFoldResult());
@@ -105,7 +106,8 @@ public class EbSsBoostExecutor {
 		String basePath = new String("src/main/resources/datasets/experiment_test/");
 
 		ArrayList<String> sources = new ArrayList<String>();
-		sources.add("Iris.arff");
+		//sources.add("Iris.arff");
+		sources.add("Vehicle.arff");
 		//sources.add("Abalone.arff");
 
 		for (String s : sources) {
@@ -195,7 +197,7 @@ public class EbSsBoostExecutor {
 			}
 
 			EbSsBoost ssBoost = new EbSsBoost(Dataset.joinDatasets(foldsForTest), validation, seed);
-			ssBoost.runEbSsBoost();
+			ssBoost.runVersionOne();
 			// break;
 		}
 	}
